@@ -4,7 +4,7 @@ Agile Web Database Application Development Paas Platform. The Framework Programm
 ![Web Database Programming](pgimage.png)
 
 
-[Alinous-Core Official Site](https://wwww.alinous.org)
+[Alinous-Core Official Site](https://www.alinous.org)
 
 [Github Page](https://alinous-core.github.io/alinous-agile-base/)
 
@@ -50,6 +50,6 @@ This software's License is MIT License.
 ## Near future of Alinous-Core
 Now we are developong C++ version of this language. It contains original high performance database. It will comming soon.
 
-[Alinous-Core Official Blog](https://wwww.alinous.org/blog/)
+[Alinous-Core Official Blog](https://www.alinous.org/blog/)
 
 
