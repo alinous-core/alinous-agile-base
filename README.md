@@ -37,7 +37,7 @@ The source code of the CMS is hosted on Github, [docker-alinous-cms](https://git
 The Application Server is written in Java, therefore it can be exteded by putting jar files (Java archive file) on the proper dorectory.
 The application server will automatically detect them and automatically deploy it internally.
 
-## Download built code
+## Download Built Software
 You can download built Server Side Program and Eclipse SDK from following pages.
 
  - [Download Page](https://www.alinous.org/documents/downloads/)
