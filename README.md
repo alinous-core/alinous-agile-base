@@ -44,6 +44,9 @@ You can download built Server Side Program and Eclipse SDK from following pages.
 
 The Example CMS is included in the Eclipse Plugin SDK as a CMS Project.
 
+## Software License
+This software's License is MIT License.
+
 ## Near future of Alinous-Core
 Now we are developong C++ version of this language. It contains original high performance database. It will comming soon.
 
