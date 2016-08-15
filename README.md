@@ -22,6 +22,9 @@ Simple program code is good for programmers to maintain it. This programming lan
 - Debugging program with debugger
 
 ## Example CMS Application
+
+![Web Database Programming](cmsimage.png)
+
 This framework has an example web database application, which is [Content Management System for Documentation Sites](https://www.alinous.org/document-cms/).
 
 The source code of the CMS is hosted on Github, [docker-alinous-cms](https://github.com/alinous-core/docker-alinous-cms).
