@@ -1,0 +1,965 @@
+options {
+    JDK_VERSION="1.5.0";
+    STATIC=false;
+    UNICODE_INPUT=true;
+
+	DEBUG_PARSER=false;
+}
+
+PARSER_BEGIN(AlinousAttrScriptParser)
+package org.alinous.parser.script.attr;
+
+import org.alinous.script.IScriptObject;
+import org.alinous.script.attribute.ParsedAttribute;
+import org.alinous.script.basic.condition.AndCondition;
+import org.alinous.script.basic.condition.DirectCondition;
+import org.alinous.script.basic.condition.DivStmtCondition;
+import org.alinous.script.basic.condition.IScriptCondition;
+import org.alinous.script.basic.condition.MinusStmtCondition;
+import org.alinous.script.basic.condition.ModuloStmtCondition;
+import org.alinous.script.basic.condition.MultipleStmtCondition;
+import org.alinous.script.basic.condition.NotCondition;
+import org.alinous.script.basic.condition.OrCondition;
+import org.alinous.script.basic.condition.ParenthesisCondition;
+import org.alinous.script.basic.condition.PlusStmtCondition;
+import org.alinous.script.basic.condition.VariableStmtCondition;
+import org.alinous.script.basic.type.BooleanConst;
+import org.alinous.script.basic.type.IStatement;
+import org.alinous.script.basic.type.NullConst;
+import org.alinous.script.basic.type.NumericConst;
+import org.alinous.script.basic.type.StringConst;
+import org.alinous.script.basic.type.VariableDescriptor;
+import org.alinous.script.runtime.ArrayPathElement;
+import org.alinous.script.runtime.DomPathElement;
+import org.alinous.script.runtime.IPathElement;
+import org.alinous.script.runtime.PathElement;
+import org.alinous.script.statement.FuncArguments;
+import org.alinous.script.statement.FunctionCall;
+import org.alinous.script.statement.ModuloStatement;
+import org.alinous.script.statement.MultipleStatement;
+import org.alinous.script.statement.ParenthesisElemenet;
+import org.alinous.script.statement.PlusPlusStatement;
+import org.alinous.script.statement.PlusStatement;
+import org.alinous.script.statement.SubStatement;
+
+
+
+
+
+@SuppressWarnings({"unused", "rawtypes"})
+public class AlinousAttrScriptParser {
+
+}
+
+PARSER_END(AlinousAttrScriptParser)
+
+
+<*>TOKEN :
+{
+	<#NOTASCII: ["\u0080"-"\ufaff"]>	|
+	<#ASCILETTER: ["a"-"z"] | ["A"-"Z"] | ["_"]> |
+	<#NUMBERLETTER: ["0"-"9"]> |
+	<#COLON: ":">	|
+	<#SEMI_COLON: ";">	|
+	
+	<#CHARACTOR: <NOTASCII> | <ASCILETTER> | <NUMBERLETTER> > |
+	
+	<#EOF_DEF: "\u0000" >
+}
+
+TOKEN :
+{
+
+	<LT_DEFAULT: "<">	:BASE
+	
+}
+
+
+
+<BASE>TOKEN :
+{
+
+	<L_BRACE: "{">	:SCRIPT	|
+	<GT_DEFAULT: ">">	: DEFAULT
+}
+
+<BASE>MORE :
+{
+	< "\\{" > 
+	{
+		image.delete(image.length() - 2, image.length());
+		image.append("{");
+	}
+	|
+	< ~[] > :BODY_STR
+}
+
+
+
+<BODY_STR>TOKEN :
+{
+	<BODY_L_BRACE: "{">
+	{
+		if(image.length() >= 2 && image.charAt(image.length() - 1) == '{'){
+			matchedToken.image = image.substring(0, image.length() - 1);
+		}
+	} :SCRIPT
+	
+	| <GT_BODY: ">">
+	{
+		if(image.length() >= 2 && image.charAt(image.length() - 1) == '>'){
+			matchedToken.image = image.substring(0, image.length() - 1);
+		}
+	} 	: DEFAULT
+}
+
+
+<BODY_STR>MORE:
+{
+	< "\\{" > 
+	{
+		image.delete(image.length() - 2, image.length());
+		image.append("{");
+	}
+	|
+	< "\\>" > |
+	< ~[] >
+}
+
+<SCRIPT>SKIP :
+{
+    " " |
+    "\t" |
+    "\n" |
+    "\r" 
+}
+
+<SCRIPT>TOKEN :
+{
+	<DOLLAR: "$">			|
+	<CMP_EQUALS: "==">		|
+	<CMP_NOTEQUALS: "!=">	|
+	<GT: ">">				|
+	<GEQ: ">=">				|
+	<LT: "<">				|
+	<LEQ: "<=">				|
+	<L_BRACKET: "[">		|
+	<R_BRACKET: "]">		|
+	<L_PARENTHESIS: "(">	|
+	<R_PARENTHESIS: ")">	|
+	<DOT: ".">				|
+	<ASTERISK: "*">			|
+	<PLUSPLUS: "++">		|
+	<PLUS: "+">				|
+	<MINUSMINUS: "--">		|
+	<MINUS: "-">			|
+	<DIV: "/">				|
+	<MODULO: "%">			|
+	<LOGICAL_AND: "&&">		|
+	<LOGICAL_OR: "||">		|
+	<COMMA: ",">			|
+	<AT_MARK: "@">			|
+	
+	<NOT: "!">	|
+		
+	<R_BRACE: "}">
+	{
+	}:BASE
+	
+}
+
+
+<SCRIPT>TOKEN [IGNORE_CASE] :
+{
+	<TRUE: "TRUE">		|
+	<FALSE: "FALSE">	|
+	<BOOL: "BOOL">		|
+	<IF: "IF">		|
+	
+	<NULL: "NULL"> |
+	
+		<IDENTIFIER: <ASCILETTER> (<ASCILETTER> | <NUMBERLETTER> | <COLON> | <SEMI_COLON>)*> |
+	<NUMERIC: <NUMBERLETTER> (<NUMBERLETTER>)*>
+}
+
+
+<SCRIPT>MORE:
+{
+	< "\"" > :DQ_STR |
+	< "'"  > :SQ_STR
+}
+
+<DQ_STR>TOKEN :
+{
+	<DQSTRLIT: "\"" >
+	{
+		matchedToken.image = image.substring(1, image.length() - 1);
+	} :SCRIPT
+}
+
+<DQ_STR>MORE:
+{
+	< "\\\"" >
+}
+
+<DQ_STR>MORE:
+{
+	< ~[] >
+}
+
+
+<SQ_STR>TOKEN :
+{
+	<SQSTRLIT: "'" >
+	{
+		matchedToken.image = image.substring(1, image.length() - 1);
+	} :SCRIPT
+}
+
+<SQ_STR>MORE:
+{
+	< "\\'" >
+}
+
+<SQ_STR>MORE:
+{
+	< ~[] >
+}
+
+
+ParsedAttribute parse() :
+{
+	ParsedAttribute attr = new ParsedAttribute();
+	IScriptObject scriptObj = null;
+	StringConst stringConst = null;
+	Token lastToken = null;
+}
+{
+	<LT_DEFAULT>
+	( 
+		(
+		
+			
+		(<L_BRACE> | stringConst=stringAndBrace()) [scriptObj=scriptElement() <R_BRACE>]
+		{
+			if(stringConst != null){
+				attr.addElement(stringConst);
+			}
+			
+			if(scriptObj != null){
+				attr.addElement(scriptObj);
+			}
+		}
+		)
+	)*
+	(lastToken=<GT_BODY> | <GT_DEFAULT>)
+	<EOF>
+	{
+		if(lastToken != null){
+			stringConst = new StringConst();
+			stringConst.setStr(lastToken.image);
+			attr.addElement(stringConst);
+		}
+		
+		return attr;
+	}
+
+
+}
+
+StringConst stringAndBrace() :
+{
+	Token t = null;
+	StringConst strConst = null;
+}
+{
+	t=<BODY_L_BRACE> 
+	{
+		if(t != null){
+			strConst = new StringConst();
+			strConst.setStr(t.image);
+		}
+		
+		return strConst;
+	}
+}
+
+
+IScriptObject scriptElement() :
+{
+	IScriptObject scriptObj = null;
+}
+{
+	(scriptObj=conditionElement() | scriptObj=statement())
+	{
+		return scriptObj;
+	}
+	
+}
+
+IScriptObject conditionElement() :
+{
+	IScriptCondition cond;
+}
+{
+	<BOOL> <L_PARENTHESIS> cond=condition() <R_PARENTHESIS>
+	{
+		return cond;
+	}
+}
+
+
+VariableDescriptor scriptVariable() :
+{
+	VariableDescriptor val = null;
+	
+	IPathElement path = null;
+	Token prefix = null;
+}
+{
+	(prefix=<DOLLAR> | prefix=<AT_MARK>) path=domPath()
+	{
+		val = new VariableDescriptor(prefix.image, path);
+		return val;
+	}
+}
+
+BooleanConst constBoolean() :
+{
+	BooleanConst blConst = new BooleanConst();
+	Token t = null;
+}
+{
+	(t=<TRUE> | t=<FALSE>)
+	{
+		blConst.setBoolStr(t.image);
+		return blConst;
+	}
+}
+
+StringConst constStr() :
+{
+	Token t = null;
+	StringConst cn = new StringConst();
+}
+{
+	( t=<DQSTRLIT> | t=<SQSTRLIT> )
+	{
+		cn.setStr(t.image);
+		return cn;
+	}
+}
+
+NumericConst constNum() :
+{
+	NumericConst nc = new NumericConst();
+	Token t = null;
+}
+{
+	t=<NUMERIC>
+	{
+		nc.setNumber(t.image);
+		return nc;
+	}
+}
+
+IScriptCondition condition() :
+{
+	IScriptCondition condition = null;
+}
+{
+	condition=orCond()
+	{
+		return condition;
+	}
+}
+
+
+IScriptCondition orCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	OrCondition or = null;
+}
+{
+	first=andCond()
+	(LOOKAHEAD(2)
+		<LOGICAL_OR> cnd=andCond()
+		{
+			if(or == null){
+				or = new OrCondition();
+				or.addCondition(first);
+			}
+			
+			or.addCondition(cnd);
+		}
+	)*
+	{
+		if(or != null){
+			return or;
+		}
+		
+		return first;
+	}
+}
+
+IScriptCondition andCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	AndCondition and = null;
+	
+}
+{
+	first=directCond()
+	(LOOKAHEAD(2)
+		<LOGICAL_AND> cnd=directCond()
+		{
+			if(and == null){
+				and = new AndCondition();
+				and.addCondition(first);
+			}
+			
+			and.addCondition(cnd);
+		}
+	)*
+	{
+		if(and != null){
+			return and;
+		}
+		
+		return first;
+	}
+}
+
+
+IScriptCondition directCond() :
+{
+	Token ope = null;
+	IScriptCondition left = null;
+	IScriptCondition right = null;
+	DirectCondition directCnd = null;
+}
+{
+	left=notCondition()
+	[LOOKAHEAD(2)
+		( ope=<CMP_EQUALS> | ope=<CMP_NOTEQUALS> | ope=<GT> | ope=<GEQ> | ope=<LT> | ope=<LEQ> )
+		right=notCondition()
+	]
+	{
+		if(ope != null){
+			directCnd = new DirectCondition();
+			
+			directCnd.setLeft(left);
+			directCnd.setOpe(ope.image);
+			directCnd.setRight(right);
+			
+			return directCnd;
+		}
+		
+		return left;
+	}
+}
+
+IScriptCondition notCondition() :
+{
+	IScriptCondition cnd = null;
+}
+{
+	<NOT> cnd=orCond()
+	{
+		NotCondition notCondition = new NotCondition();
+		notCondition.setCondition(cnd);		
+		
+		return notCondition;
+	}
+	| cnd=plusStmtCond()
+	{
+		return cnd;
+	}
+	
+}
+
+IScriptCondition plusStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	PlusStmtCondition scCond = null;
+}
+{
+	first=minusStmtCond()
+	(
+		<PLUS> cnd=minusStmtCond()
+		{
+			if(scCond == null){
+				scCond = new PlusStmtCondition();
+				scCond.addCondition(first);
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition minusStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	MinusStmtCondition scCond = null;
+}
+{
+	first=multipleStmtCond()
+	(
+		<MINUS> cnd=multipleStmtCond()
+		{
+			if(scCond == null){
+				scCond = new MinusStmtCondition();
+				scCond.addCondition(first);
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition multipleStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	MultipleStmtCondition scCond = null;
+}
+{
+	first=divStmtCond()
+	(
+		<ASTERISK> cnd=divStmtCond()
+		{
+			if(scCond == null){
+				scCond = new MultipleStmtCondition();
+				scCond.addCondition(first);
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition divStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	DivStmtCondition scCond = null;
+}
+{
+	first=moduloStmtCond()
+	(
+		<DIV> cnd=moduloStmtCond()
+		{
+			if(scCond == null){
+				scCond = new DivStmtCondition();
+				scCond.addCondition(first);
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+
+IScriptCondition moduloStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	ModuloStmtCondition scCond = null;
+}
+{
+	first=parenthesisCond()
+	(
+		<MODULO> cnd=parenthesisCond()
+		{
+			if(scCond == null){
+				scCond = new ModuloStmtCondition();
+				scCond.addCondition(first);
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition parenthesisCond() :
+{
+	IScriptCondition cnd = null;
+}
+{
+	<L_PARENTHESIS> cnd=orCond() <R_PARENTHESIS>
+	{
+		ParenthesisCondition pcnd = new ParenthesisCondition();
+		pcnd.setCondition(cnd);
+		
+		return pcnd;
+	}
+	 |	cnd=variableStatementCondition()
+	{
+		return cnd;
+	}
+}
+
+IScriptCondition variableStatementCondition() :
+{
+	IStatement stmt = null;
+	VariableStmtCondition cond = new VariableStmtCondition();
+}
+{
+	stmt=plusplusStatement()
+	{
+		cond.setStmt(stmt);
+		return cond;
+	}
+}
+
+
+
+
+IStatement statement() :
+{
+	IStatement stmt = null;
+}
+{
+	stmt=plusStatement()
+	{
+		return stmt;
+	}
+}
+
+IStatement plusStatement() :
+{
+	IStatement first = null;
+	IStatement stmt = null;
+	PlusStatement plusStatement = null;
+	Token t = null;
+}
+{
+	first=multipleStatement()
+	(LOOKAHEAD(2)
+		(t=<PLUS> | t=<MINUS>) stmt=multipleStatement()
+		{
+			if(plusStatement == null){
+				plusStatement = new PlusStatement();
+				plusStatement.setFirst(first);
+			}
+			
+			SubStatement subStmt = new SubStatement();
+			subStmt.setOpe(t.image);
+			subStmt.setTarget(stmt);
+						
+			plusStatement.addOperation(subStmt);
+		}
+	)*
+	{
+		if(plusStatement != null){
+			return plusStatement;
+		}
+		
+		return first;
+	}
+	
+}
+
+IStatement multipleStatement() :
+{
+	IStatement first = null;
+	IStatement stmt = null;
+	Token t = null;
+	MultipleStatement mulStatement = null;
+}
+{
+	first=moduloStatement()
+	(
+		(t=<ASTERISK> | t=<DIV>) stmt=moduloStatement()
+		{
+			if(mulStatement == null){
+				mulStatement = new MultipleStatement();
+				mulStatement.setFirst(first);
+			}
+			
+			SubStatement subStmt = new SubStatement();
+			subStmt.setOpe(t.image);
+			subStmt.setTarget(stmt);
+			
+			mulStatement.addOperation(subStmt);
+		}	
+	)*
+	{
+		if(mulStatement != null){
+			return mulStatement;
+		}
+		
+		return first;
+	}
+}
+
+IStatement moduloStatement() :
+{
+	IStatement first = null;
+	IStatement stmt = null;
+	ModuloStatement modStmt = null;
+}
+{
+	first=parenthesisElement() 
+	(
+		<MODULO> stmt=parenthesisElement()
+		{
+			if(modStmt == null){
+				modStmt = new ModuloStatement();
+				modStmt.setFirst(first);
+				modStmt.addOperation(stmt);
+				
+			}else{
+				modStmt.addOperation(stmt);
+			}
+		}
+	)*
+	{
+		if(modStmt != null){
+			return modStmt;
+		}
+	
+		return first;
+	}
+	
+}
+
+
+
+IStatement parenthesisElement() :
+{
+	IStatement stmt = null;
+}
+{
+	stmt=plusplusStatement()
+	{
+		return stmt;
+	}
+	|
+	<L_PARENTHESIS> stmt=statement() <R_PARENTHESIS>
+	{
+		ParenthesisElemenet p = new ParenthesisElemenet();
+		p.setStatement(stmt);
+		
+		return p;
+	}
+}
+
+IStatement plusplusStatement() :
+{
+	PlusPlusStatement plusplus = null;
+	IStatement stmt = null;
+	Token t1 = null;
+	Token t2 = null;
+}
+{
+	(t1=<PLUSPLUS> | t1=<MINUSMINUS>) stmt=statementElement()  
+	{
+		plusplus = new PlusPlusStatement();
+		plusplus.setStmt(stmt);
+		
+		plusplus.setPreOpe(t1.image);
+		plusplus.setLine(t1.beginLine);
+		plusplus.setLinePosition(t1.beginColumn);
+
+		return plusplus;
+	}
+	| stmt=statementElement() [ t2=<PLUSPLUS> | t2=<MINUSMINUS> ]
+	{
+		if(t2 == null){
+			return stmt;
+		}
+
+		plusplus = new PlusPlusStatement();
+		plusplus.setStmt(stmt);
+		
+		plusplus.setPostOpe(t2.image);
+		plusplus.setLine(t2.beginLine);
+		plusplus.setLinePosition(t2.beginColumn);
+		
+		return plusplus;
+	}
+
+}
+
+
+IStatement statementElement() :
+{
+	IStatement stmt = null;
+}
+{
+	
+	(
+	stmt=funcCall() |
+	stmt=scriptVariable() |
+	stmt=nullConst()	|
+	stmt=constStr() |
+	stmt=constBoolean() |
+	stmt=constNum() )
+	{
+		return stmt;
+	}
+
+}
+
+NullConst nullConst() :
+{
+	NullConst stmt = new NullConst();
+}
+{
+	<NULL>
+	{
+		return stmt;
+	}
+}
+
+
+FunctionCall funcCall() :
+{
+	FunctionCall func = new FunctionCall();
+	FuncArguments args = new FuncArguments();
+	Token t = null;
+}
+{
+	t=<IDENTIFIER> <L_PARENTHESIS> [args=funcArguments()] <R_PARENTHESIS>
+	{
+		func.setArgs(args);
+		func.setFuncName(t.image);
+		
+		return func;
+	}
+}
+
+FuncArguments funcArguments() :
+{
+	FuncArguments args = new FuncArguments();
+	IStatement stmt = null;
+}
+{
+	stmt=statement()
+	{
+		args.addArgument(stmt);
+	}
+	(
+		<COMMA> stmt=statement()
+		{
+			args.addArgument(stmt);
+		}
+	)*
+	{
+		return args;
+	}
+}
+
+
+
+
+
+///  PATH ELEMENT /////////////////////////////////////////////////////////
+
+IPathElement domPath() :
+{
+	DomPathElement first = null;
+	DomPathElement domProp = null;
+	IStatement numeric = null;
+	
+	PathElement path = null;
+	IPathElement current = null;
+}
+{
+	first=domPathElement() 
+	{
+		path = new PathElement(first.getImage());
+		current = path;
+	}	
+	(
+		(<DOT> domProp=domPathElement()) 
+		{
+			PathElement next = new PathElement(domProp.getImage());
+			current.setChild(next);
+			next.setParent(current);
+			
+			current = next;
+		}
+		
+		| (<L_BRACKET> numeric=statement() <R_BRACKET>)
+		{
+			ArrayPathElement nextAr = new ArrayPathElement(numeric);
+			
+			current.setChild(nextAr);
+			nextAr.setParent(current);
+			
+			current = nextAr;
+		}
+	)*
+	
+	{
+		return path;
+	}
+}
+
+
+DomPathElement domPathElement() :
+{
+	Token t = null;
+	DomPathElement el = new DomPathElement();
+}
+{
+	(
+		t=<IDENTIFIER> |
+		t=<IF>
+	)
+	{
+		el.addString(t.image);
+	}
+	[
+		LOOKAHEAD(2)
+		(t=<MINUS>)
+		{
+			el.addString(t.image);
+		}
+		(
+			t=<IDENTIFIER> |
+			t=<IF>
+		)
+		{
+			el.addString(t.image);
+		}
+	]
+	{
+		return el;
+	}
+}
+
+
+///////////////////////////////////////////////////////////

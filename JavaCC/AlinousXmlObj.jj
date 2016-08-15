@@ -1,0 +1,1606 @@
+options {
+    JDK_VERSION="1.5.0";
+    STATIC=false;
+    UNICODE_INPUT=true;
+    
+   	DEBUG_PARSER=false;
+
+}
+
+PARSER_BEGIN(AlinousXmlObjectParser)
+package org.alinous.parser.xml;
+
+import org.alinous.objects.Attribute;
+import org.alinous.objects.IAttributeValue;
+import org.alinous.objects.DqString;
+import org.alinous.objects.SqString;
+import org.alinous.objects.XMLTagBase;
+import org.alinous.objects.html.ATagObject;
+import org.alinous.objects.html.AddressTagObject;
+import org.alinous.objects.html.AlinousTopObject;
+import org.alinous.objects.html.AppletTagObject;
+import org.alinous.objects.html.AreaTagObject;
+import org.alinous.objects.html.BaseTagObject;
+import org.alinous.objects.html.BigTagObject;
+import org.alinous.objects.html.BlockquoteTagObject;
+import org.alinous.objects.html.ButtonTagObject;
+import org.alinous.objects.html.CDataTagObject;
+import org.alinous.objects.html.CaptionTagObject;
+import org.alinous.objects.html.CenterTagObject;
+import org.alinous.objects.html.CiteTagObject;
+import org.alinous.objects.html.ColTagObject;
+import org.alinous.objects.html.ColgroupTagObject;
+import org.alinous.objects.html.CommentObject;
+import org.alinous.objects.html.DelTagObject;
+import org.alinous.objects.html.DivTagObject;
+import org.alinous.objects.html.DlTagObject;
+import org.alinous.objects.html.DoctypeTagObject;
+import org.alinous.objects.html.EmTagObject;
+import org.alinous.objects.html.FieldsetTagObject;
+import org.alinous.objects.html.FontTagObject;
+import org.alinous.objects.html.FormTagObject;
+import org.alinous.objects.html.FrameTagObject;
+import org.alinous.objects.html.FramesetTagObject;
+import org.alinous.objects.html.H4TagObject;
+import org.alinous.objects.html.H5TagObject;
+import org.alinous.objects.html.H6TagObject;
+import org.alinous.objects.html.HeadTagObject;
+import org.alinous.objects.html.HrTagObject;
+import org.alinous.objects.html.HtmlTagObject;
+import org.alinous.objects.html.ITagObject;
+import org.alinous.objects.html.InputTagObject;
+import org.alinous.objects.html.InsTagObject;
+import org.alinous.objects.html.LabelTagObject;
+import org.alinous.objects.html.LegendTagObject;
+import org.alinous.objects.html.LiTagObject;
+import org.alinous.objects.html.MapTagObject;
+import org.alinous.objects.html.MetaTagObject;
+import org.alinous.objects.html.NoscriptTagObject;
+import org.alinous.objects.html.ObjectTagObject;
+import org.alinous.objects.html.OlTagObject;
+import org.alinous.objects.html.OptgroupTagObject;
+import org.alinous.objects.html.OptionTagObject;
+import org.alinous.objects.html.ParamTagObject;
+import org.alinous.objects.html.PreTagObject;
+import org.alinous.objects.html.QTagObject;
+import org.alinous.objects.html.ScriptTagObject;
+import org.alinous.objects.html.SelectTagObject;
+import org.alinous.objects.html.SmallTagObject;
+import org.alinous.objects.html.SpanTagObject;
+import org.alinous.objects.html.StyleTagObject;
+import org.alinous.objects.html.SubTagObject;
+import org.alinous.objects.html.SupTagObject;
+import org.alinous.objects.html.TBodyTagObject;
+import org.alinous.objects.html.TextAreaTagObject;
+import org.alinous.objects.html.TfootTagObject;
+import org.alinous.objects.html.ThTagObject;
+import org.alinous.objects.html.ThreadTagObject;
+import org.alinous.objects.html.BodyTagObject;
+import org.alinous.objects.html.TableTagObject;
+import org.alinous.objects.html.TrTagObject;
+import org.alinous.objects.html.TdTagObject;
+import org.alinous.objects.html.BTagObject;
+import org.alinous.objects.html.BrTagObject;
+import org.alinous.objects.html.H1TagObject;
+import org.alinous.objects.html.H2TagObject;
+import org.alinous.objects.html.H3TagObject;
+import org.alinous.objects.html.PTagObject;
+import org.alinous.objects.html.ImgTagObject;
+import org.alinous.objects.html.TtTagObject;
+import org.alinous.objects.html.UlTagObject;
+import org.alinous.objects.html.UnknownTagObject;
+import org.alinous.objects.html.XmlHeaderTagObject;
+
+import org.alinous.objects.html.StringContainer;
+
+
+
+public class AlinousXmlObjectParser {
+	public AlinousTopObject topObj = new AlinousTopObject();
+}
+
+PARSER_END(AlinousXmlObjectParser)
+
+/*
+SKIP :
+{
+    " " |
+    "\t" |
+    "\n" |
+    "\r" 
+}
+*/
+
+<*>TOKEN :
+{
+	<#NOTASCII: ["\u0080"-"\ufaff"]>	|
+	<#ASCILETTER: ["a"-"z"] | ["A"-"Z"] > |
+	<#NUMBERLETTER: ["0"-"9"]> |
+	
+	
+	<#CHARACTOR: <NOTASCII> | <ASCILETTER> | <NUMBERLETTER> > |
+	<#MINUS: "-">
+}
+
+TOKEN :
+{
+	<TAG_BEGIN: "<"> :IN_TAG |
+	<TAG_END_BEGIN: "</"> :IN_TAG 
+}
+
+MORE :
+{
+	< ~[] > :BODY_STR
+}
+
+
+<IN_TAG>SKIP :
+{
+    " " |
+    "\t" |
+    "\n" |
+    "\r" 
+}
+
+
+<IN_TAG>TOKEN [IGNORE_CASE] :
+{
+    <HTML: "HTML"> |
+    <BODY: "BODY"> |
+    <TABLE: "TABLE"> |
+    <TR: "TR"> |
+    <TD: "TD"> |
+    <B: "B"> |
+    <BR: "BR"> |
+    <H1: "H1"> |
+    <H2: "H2"> |
+    <H3: "H3"> |
+    <P: "P"> |
+    <IMG: "IMG"> |
+    <A: "A"> |
+    <META: "META"> |
+    <SCRIPT: "SCRIPT"> |
+    <NOSCRIPT: "NOSCRIPT"> |
+    <FONT: "FONT"> |
+    <DIV: "DIV">	|
+    
+    <FORM: "FORM">	|
+    <INPUT: "INPUT"> |
+    <SELECT: "SELECT"> |
+    <OPTGROUP: "OPTGROUP">	|
+    <OPTION: "OPTION">	|
+    <TEXTAREA: "TEXTAREA">	|
+    <LEGEND: "LEGEND">	|
+    <FIELDSET: "FIELDSET">	|
+    <LABEL: "LABEL">	|
+    <BUTTON: "BUTTON"> |
+    
+    <LI: "LI">					|
+    <BIG: "BIG">				|
+    <SMALL: "SMALL">			|
+    <BLOCKQUOTE: "BLOCKQUOTE">	|
+    <HEAD: "HEAD">				|
+    <TBODY: "TBODY">			|
+    <CENTER: "CENTER">			|
+    <HR: "HR">					|
+    <SPAN: "SPAN">				|
+    
+    <AREA: "AREA">				|
+    <BASE: "BASE">				|
+    <PARAM: "PARAM">			|
+    <COL: "COL">				|
+    
+    <CAPTION: "CAPTION">		|
+    <CITE: "CITE">				|
+    <PRE: "PRE">				|
+    <EM: "EM">					|
+    <FRAME: "FRAME">			|
+    <FRAMESET: "FRAMESET">		|
+    <INS: "INS">				|
+    <STYLE: "STYLE">			|
+    <TH: "TH">					|
+    <SUP: "SUP">				|
+    <SUB: "SUB">				|
+    <UL: "UL">					|
+    <Q: "Q">					|
+    <OL: "OL">					|
+    <MAP: "MAP">				|
+    <I: "I">					|
+    <H4: "H4">					|
+    <H5: "H5">					|
+    <H6: "H6">					|
+    <DEL: "DEL">				|
+    <DL: "DL">					|
+    <ADDRESS: "ADDRESS">		|
+    <APPLET: "APPLET">			|
+    <OBJECT: "OBJECT">			|
+    <TFOOT: "TFOOT">			|
+    <TT: "TT">					|
+    <THREAD: "THREAD">			|
+    <COLGROUP: "COLGROUP">			|
+    
+    <CHECKED: "CHECKED">	|
+    <SELECTED: "SELECTED">	|
+    
+    <DOCTYPE: "!DOCTYPE">	|
+    
+    <EQUALS: "="> |
+    <COLON: ":"> |
+    
+    <IDENTIFIER: <ASCILETTER> (<ASCILETTER> | <NUMBERLETTER> | <MINUS>)* > |
+    <#ATTR_SUB: <COLON> <IDENTIFIER> > |
+    <ATTR_IDENTIFIER: <IDENTIFIER> > |
+    
+    <QUESTION: "?"> |
+    
+	<HTML_TAG_END: ">"> :DEFAULT |
+	<XML_TAG_END: "/>"> :DEFAULT
+	
+}
+
+
+<IN_TAG>MORE :
+{
+	<DQ: "\""> :DQ_STR |
+	<SQ: "'"> :SQ_STR
+}
+
+<IN_TAG>MORE:
+{
+	< "!--" > :COMM |
+	<CDATA_BEGIN: "![CDATA["> :CDATA
+}
+
+
+<CDATA>TOKEN :
+{
+	<CDATA_END: "]]>" >
+	{
+		matchedToken.image = image.substring("![CDATA[".length(), image.length());
+	}	:DEFAULT
+}
+
+
+<CDATA>MORE :
+{
+	< ~[] >
+}
+
+<COMM>TOKEN:
+{
+	<COMMENT: "-->" >
+	{
+		matchedToken.image = image.substring(3, image.length() - 3);
+	}  : DEFAULT
+}
+
+<COMM>MORE :
+{
+	< ~[] >
+}
+
+<DQ_STR>TOKEN :
+{
+	<DQ_END: "\"">
+	{
+		matchedToken.image = image.substring(1, image.length() - 1);
+	} : IN_TAG
+}
+
+<DQ_STR>MORE:
+{
+	< "\\\"" >
+}
+
+<DQ_STR>MORE:
+{
+	< ~[] >
+}
+
+<SQ_STR>TOKEN :
+{
+	<SQ_END: "'">
+	{
+		matchedToken.image = image.substring(1, image.length() - 1);
+	} : IN_TAG
+}
+
+<SQ_STR>MORE:
+{
+	< "\\'" >
+}
+
+
+<SQ_STR>MORE:
+{
+	< ~[] >
+}
+
+/*
+<BODY_STR>MORE:
+{
+	<CDATA_BEGIN: "<![CDATA["> |
+	<CDATA_END: "]]>">
+}
+*/
+
+<BODY_STR>TOKEN :
+{
+	<STR2TAG: "<">
+	{
+		if(image.length() >= 2 && image.charAt(image.length() - 1) == '<'){
+			matchedToken.image = image.substring(0, image.length() - 1);
+		}
+	}  :IN_TAG
+	|
+	<STR2TAG_END_BEGIN: "</">
+	{
+		if(image.length() >= 3 && image.charAt(image.length() - 2) == '<'){
+			matchedToken.image = image.substring(0, image.length() - 2);
+		}
+	} :IN_TAG
+	|
+	<STR_EOF: "\0">
+	{
+		if(image.length() >= 3 && image.charAt(image.length() - 2) == '<'){
+			matchedToken.image = image.substring(0, image.length() - 2);
+		}
+	}
+}
+
+<BODY_STR>MORE:
+{
+	< ~[] >
+}
+
+
+
+AlinousTopObject parse() :
+{
+	//AlinousTopObject topObj = new AlinousTopObject();
+	XMLTagBase header = null;
+}
+{
+	[LOOKAHEAD(2) (LOOKAHEAD(2) header=docType() | header=xmlDef())
+		{
+			topObj.addInnerObject(header);
+		}
+	]
+	tags(topObj) [<STR_EOF>] <EOF>
+	{
+    	return topObj;
+    }
+}
+
+XmlHeaderTagObject xmlDef() :
+{
+	XmlHeaderTagObject tag = new XmlHeaderTagObject();
+}
+{
+	(<TAG_BEGIN> | <STR2TAG>) <QUESTION> <IDENTIFIER>
+		attrs(tag)
+	<QUESTION> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+DoctypeTagObject docType() :
+{
+	DoctypeTagObject tag = new DoctypeTagObject();
+}
+{
+	(<TAG_BEGIN> | <STR2TAG>) <DOCTYPE>
+	(
+		<HTML> | <IDENTIFIER> | attrValue()	
+	)*	
+	<HTML_TAG_END>
+	{
+		return tag;
+	}
+	
+}
+
+XMLTagBase tags(XMLTagBase tags) :
+{
+	XMLTagBase tmp = null;
+}
+{
+	(tmp=tag(tags){ tags.addInnerObject(tmp); })*{
+		return tmp;
+	}
+}
+
+XMLTagBase tag(XMLTagBase parent) :
+{
+	XMLTagBase tag = null;
+	StringContainer str = null;
+	Token str_t = null;
+	Token tag_t = null;
+}
+{
+	(tag_t=<TAG_BEGIN> | str_t=<STR2TAG>)
+	(
+		tag=htmlTag() 		|
+		tag=bodyTag() 		|
+		tag=tableTag() 		|
+		tag=trTag() 		|
+		tag=tdTag()			|
+		tag=bTag()			|
+		tag=brTag()			|
+		tag=h1Tag()			|
+		tag=h2Tag()			|
+		tag=h3Tag() 		|
+		tag=pTag()			|
+		tag=imgTag()		|
+		tag=aTag()			|
+		tag=metaTag()		|
+		tag=scriptTag()		|
+		tag=noscriptTag()	|
+		tag=fontTag()		|
+		tag=divTag()		|
+		tag=formTag()		|
+		tag=inputTag()		|
+		tag=selectTag()		|
+		tag=optgroupTag()	|
+		tag=optionTag()		|
+		tag=textareaTag()	|
+		tag=legendTag()		|
+		tag=fieldsetTag()	|
+		tag=labelTag()		|
+		tag=buttonTag()		|
+		tag=liTag()			|
+		tag=bigTag()		|
+		tag=smallTag()		|
+		tag=blockquoteTag()	|
+		tag=headTag()		|
+		tag=tbodyTag()		|
+		tag=centerTag()		|
+		tag=hrTag()			|
+		tag=spanTag()		|
+		tag=areaTag()		|
+		tag=baseTag()		|
+		tag=paramTag()		|
+		tag=colTag()		|
+		tag=captionTag()	|
+		tag=citeTag()		|
+		tag=preTag()		|
+		tag=emTag()			|
+		tag=frameTag()		|
+		tag=framesetTag()	|
+		tag=insTag()		|
+		tag=styleTag()		|
+		tag=thTag()			|
+		tag=supTag()		|
+		tag=subTag()		|
+		tag=ulTag()			|
+		tag=qTag()			|
+		tag=olTag()			|
+		tag=mapTag()		|
+		tag=iTag()			|
+		tag=h4Tag()			|
+		tag=h5Tag()			|
+		tag=h6Tag()			|
+		tag=delTag()		|
+		tag=dlTag()			|
+		tag=addressTag()	|
+		tag=appletTag()		|
+		tag=objectTag()		|
+		tag=tfootTag()		|
+		tag=ttTag()			|
+		tag=threadTag()		|
+		tag=colgroupTag()	|
+
+		
+		tag=unknownTag()	|
+		
+		tag = cdataTag() |
+		tag=comment()
+		
+	)
+	{
+		if(str_t != null){
+			str = new StringContainer();
+			str.setStr(str_t.image);
+			parent.addInnerObject(str);
+		}
+		else{
+			tag.setLine(tag_t.beginLine);
+			tag.setLinePosition(tag_t.beginColumn);
+		}
+		
+		return tag;
+	}
+}
+
+CDataTagObject cdataTag() :
+{
+	CDataTagObject tag = new CDataTagObject();
+	Token t = null;
+}
+{
+	//<CDATA_BEGIN>
+	t=<CDATA_END>
+	{
+		tag.setContent(t.image);
+	
+		return tag;
+	}
+}
+
+UnknownTagObject unknownTag() :
+{
+	UnknownTagObject tag = new UnknownTagObject();
+	String tagName = null;
+}
+{
+	tagName=unknownTagIdentifier() attrs(tag) 
+		(<HTML_TAG_END>
+			
+			tags(tag)
+			
+			endTag(tag) unknownTagIdentifier() <HTML_TAG_END>
+		
+		| <XML_TAG_END>)
+	{
+		tag.setTagName(tagName);
+		return tag;
+	}
+}
+
+String unknownTagIdentifier() :
+{
+	StringBuffer sb = new StringBuffer();
+	String str = null;
+	Token t = null;
+}
+{
+	t=<IDENTIFIER>
+	{
+		sb.append(t.image);
+	}
+	(
+		<COLON> str=attrIdentifierElement()
+		{
+			sb.append(":");
+			sb.append(str);
+		}		
+	)*
+	{
+		return sb.toString();
+	}
+}
+
+
+void endTag(XMLTagBase parent) :
+{
+	StringContainer str = null;
+	Token str_t = null;
+}
+{
+	<TAG_END_BEGIN> | str_t=<STR2TAG_END_BEGIN>
+	{
+		if(str_t != null){
+			str = new StringContainer();
+			str.setStr(str_t.image);
+			parent.addInnerObject(str);
+		}
+	}
+}
+
+void attrs(XMLTagBase tag) :
+{
+	Attribute at = null; 
+}
+{
+	(
+		at=attr()
+		{
+			tag.putAttribute(at.getKey(), at.getValue());
+		}
+		
+		| at=singleAttr()
+		{
+			tag.putAttribute(at.getKey(), at.getValue());
+		}
+	
+	)*
+}
+
+
+Attribute singleAttr() :
+{
+	Attribute attr = new Attribute();
+	Token t = null;
+	IAttributeValue val = null;
+}
+{
+	(t=<CHECKED> | t=<SELECTED>) [<EQUALS> val=attrValue()]
+	{
+		attr.setKey(t.image);
+		attr.setValue(val);
+		
+		return attr;
+	}
+}
+
+
+Attribute attr() :
+{
+	Attribute attr = new Attribute();
+	String id;
+	IAttributeValue val = null;
+}
+{
+	id=attrIdentifier() <EQUALS> val=attrValue()
+	{
+		attr.setKey(id);
+		attr.setValue(val);
+		return attr;
+	}
+}
+
+String attrIdentifier() :
+{
+	StringBuffer sb = new StringBuffer();
+	String str = null;
+}
+{
+	str=attrIdentifierElement()
+	{
+		sb.append(str);
+	}
+	(
+		<COLON> str=attrIdentifierElement()
+		{
+			sb.append(":");
+			sb.append(str);
+		}		
+	)*
+	{
+		return sb.toString();
+	}
+}
+
+String attrIdentifierElement() :
+{
+	Token t1 = null;
+}
+{
+	(t1=<IDENTIFIER> | t1=<FORM> | t1=<STYLE> | t1=<HTML> | t1=<BODY>
+	| t1=<TABLE> | t1=<TR> | t1=<TD> | t1=<B> | t1=<BR> | t1=<H1>
+	| t1=<H2> | t1=<H3> | t1=<P> | t1=<IMG> | t1=<A> | t1=<META>
+	| t1=<SCRIPT> | t1=<NOSCRIPT> | t1=<FONT> | t1=<DIV> | t1=<INPUT> | t1=<SELECT>
+	| t1=<OPTGROUP> | t1=<OPTION> | t1=<TEXTAREA> | t1=<LEGEND> | t1=<FIELDSET> | t1=<LABEL>
+	| t1=<BUTTON> | t1=<LI> | t1=<BIG> | t1=<SMALL> | t1=<BLOCKQUOTE> | t1=<HEAD>
+	| t1=<TBODY> | t1=<CENTER> | t1=<HR> | t1=<SPAN> | t1=<AREA>
+	| t1=<BASE> | t1=<PARAM> | t1=<COL> | t1=<CAPTION> | t1=<CITE> | t1=<PRE>
+	| t1=<EM> | t1=<FRAME> | t1=<FRAMESET> | t1=<INS> | t1=<TH> | t1=<SUP>
+	| t1=<SUB> | t1=<UL> | t1=<Q> | t1=<OL> | t1=<MAP> | t1=<I>
+	| t1=<H4> | t1=<H5> | t1=<H6> | t1=<DEL> | t1=<DL> | t1=<ADDRESS>
+	| t1=<APPLET> | t1=<OBJECT> | t1=<TFOOT> | t1=<TT> | t1=<THREAD> | t1=<COLGROUP>
+	)
+	{
+		return t1.image;
+	}
+}
+
+
+
+IAttributeValue attrValue() :
+{
+	Token t1 = null;
+}
+{
+	t1=<DQ_END>{ return new DqString(t1.image); } 
+	| t1=<SQ_END>{ return new SqString(t1.image); }
+}
+
+
+HtmlTagObject htmlTag() :
+{
+	HtmlTagObject htmlTag = new HtmlTagObject();
+}
+{
+	<HTML> attrs(htmlTag) <HTML_TAG_END>
+		tags(htmlTag)
+	endTag(htmlTag) <HTML> <HTML_TAG_END>
+	{
+		return htmlTag;
+	}
+}
+
+BodyTagObject bodyTag() :
+{
+	BodyTagObject tagBody = new BodyTagObject();
+}
+{
+	<BODY> attrs(tagBody) <HTML_TAG_END>
+		tags(tagBody)
+	endTag(tagBody) <BODY><HTML_TAG_END>
+	{
+		return tagBody;
+	}
+}
+
+TableTagObject tableTag() :
+{
+	TableTagObject tableTag = new TableTagObject();
+}
+{
+	<TABLE> attrs(tableTag) <HTML_TAG_END>
+		tags(tableTag)
+	endTag(tableTag) <TABLE> <HTML_TAG_END>
+	{
+		return tableTag;
+	}
+}
+
+TrTagObject trTag() :
+{
+	TrTagObject trTag = new TrTagObject();
+}
+{
+	<TR> attrs(trTag) <HTML_TAG_END>
+		tags(trTag)
+	endTag(trTag) <TR> <HTML_TAG_END>
+	{
+		return trTag;
+	}
+}
+
+TdTagObject tdTag() :
+{
+	TdTagObject tdTag = new TdTagObject();
+}
+{
+	<TD> attrs(tdTag) <HTML_TAG_END>
+		tags(tdTag)
+	endTag(tdTag) <TD> <HTML_TAG_END>
+	{
+		return tdTag;
+	}
+}
+
+BTagObject bTag() :
+{
+	BTagObject bTag = new BTagObject();
+}
+{
+	<B> attrs(bTag) <HTML_TAG_END>
+		tags(bTag)
+	endTag(bTag) <B> <HTML_TAG_END>
+	{
+		return bTag;
+	}
+}
+
+BrTagObject brTag() :
+{
+	BrTagObject brTag = new BrTagObject();
+}
+{
+	<BR>  attrs(brTag) ( <HTML_TAG_END> | <XML_TAG_END> )
+	{
+		return brTag;
+	}
+}
+
+H1TagObject h1Tag() :
+{
+	H1TagObject h1Tag = new H1TagObject();
+}
+{
+	<H1> attrs(h1Tag) <HTML_TAG_END>
+		tags(h1Tag)
+	endTag(h1Tag) <H1> <HTML_TAG_END>
+	{
+		return h1Tag;
+	}
+}
+
+H2TagObject h2Tag() :
+{
+	H2TagObject h2Tag = new H2TagObject();
+}
+{
+	<H2> attrs(h2Tag) <HTML_TAG_END>
+		tags(h2Tag)
+	endTag(h2Tag) <H2> <HTML_TAG_END>
+	{
+		return h2Tag;
+	}
+}
+
+H3TagObject h3Tag() :
+{
+	H3TagObject h3Tag = new H3TagObject();
+}
+{
+	<H3> attrs(h3Tag) <HTML_TAG_END>
+		tags(h3Tag)
+	endTag(h3Tag) <H3> <HTML_TAG_END>
+	{
+		return h3Tag;
+	}
+}
+
+PTagObject pTag() :
+{
+	PTagObject pTag = new PTagObject();
+}
+{
+	<P> attrs(pTag) <HTML_TAG_END>
+		tags(pTag)
+	endTag(pTag) <P> <HTML_TAG_END>
+	{
+		return pTag;
+	}
+}
+
+
+ImgTagObject imgTag() :
+{
+	ImgTagObject tag = new ImgTagObject();
+}
+{
+
+	<IMG>  attrs(tag) ( <HTML_TAG_END> | <XML_TAG_END> )
+	{
+		return tag;
+	}
+	
+}
+
+ATagObject aTag() :
+{
+	ATagObject tag = new ATagObject();
+}
+{
+	<A> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <A> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+MetaTagObject metaTag() :
+{
+	MetaTagObject tag = new MetaTagObject();
+}
+{
+	<META>  attrs(tag) ( <HTML_TAG_END> | <XML_TAG_END> )
+	{
+		return tag;
+	}
+	
+}
+
+
+ScriptTagObject scriptTag() :
+{
+	ScriptTagObject tag = new ScriptTagObject();
+}
+{
+	<SCRIPT> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <SCRIPT> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+NoscriptTagObject noscriptTag() :
+{
+	NoscriptTagObject tag = new NoscriptTagObject();
+}
+{
+	<NOSCRIPT> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <NOSCRIPT> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+FontTagObject fontTag() :
+{
+	FontTagObject tag = new FontTagObject();
+}
+{
+	<FONT> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <FONT> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+DivTagObject divTag() :
+{
+	DivTagObject tag = new DivTagObject();
+}
+{
+	<DIV> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <DIV> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+FormTagObject formTag() :
+{
+	FormTagObject tag = new FormTagObject();
+}
+{
+	<FORM> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <FORM> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+InputTagObject inputTag() :
+{
+	InputTagObject tag = new InputTagObject();
+}
+{
+	<INPUT> attrs(tag) (<HTML_TAG_END> | <XML_TAG_END>)
+	{
+		return tag;
+	}
+}
+
+SelectTagObject selectTag() :
+{
+	SelectTagObject tag = new SelectTagObject();
+}
+{
+	<SELECT> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <SELECT> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+OptgroupTagObject optgroupTag() :
+{
+	OptgroupTagObject tag = new OptgroupTagObject();
+}
+{
+	<OPTGROUP> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <OPTGROUP> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+OptionTagObject optionTag() :
+{
+	OptionTagObject tag = new OptionTagObject();
+}
+{
+	<OPTION> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <OPTION> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+TextAreaTagObject textareaTag() :
+{
+	TextAreaTagObject tag = new TextAreaTagObject();
+}
+{
+	<TEXTAREA> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <TEXTAREA> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+LegendTagObject legendTag() :
+{
+	LegendTagObject tag = new LegendTagObject();
+}
+{
+	<LEGEND> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <LEGEND> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+FieldsetTagObject fieldsetTag() :
+{
+	FieldsetTagObject tag = new FieldsetTagObject();
+}
+{
+	<FIELDSET> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <FIELDSET> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+LabelTagObject labelTag() :
+{
+	LabelTagObject tag = new LabelTagObject();
+}
+{
+	<LABEL> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <LABEL> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+ButtonTagObject buttonTag() :
+{
+	ButtonTagObject tag = new ButtonTagObject();
+}
+{
+	<BUTTON> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <BUTTON> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+CommentObject comment() :
+{
+	CommentObject comm = new CommentObject();
+	Token t = null;
+}
+{
+	t=<COMMENT>
+	{
+		comm.setCommentStr(t.image);
+		return comm;
+	}
+}
+
+LiTagObject liTag() :
+{
+	LiTagObject tag = new LiTagObject();
+}
+{
+	<LI> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <LI> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+BigTagObject bigTag() :
+{
+	BigTagObject tag = new BigTagObject();
+}
+{
+	<BIG> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <BIG> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+SmallTagObject smallTag() :
+{
+	SmallTagObject tag = new SmallTagObject();
+}
+{
+	<SMALL> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <SMALL> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+BlockquoteTagObject blockquoteTag() :
+{
+	BlockquoteTagObject tag = new BlockquoteTagObject();
+}
+{
+	<BLOCKQUOTE> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <BLOCKQUOTE> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+HeadTagObject headTag() :
+{
+	HeadTagObject tag = new HeadTagObject();
+}
+{
+	<HEAD> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <HEAD> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+TBodyTagObject tbodyTag():
+{
+	TBodyTagObject tag = new TBodyTagObject();
+}
+{
+	<TBODY> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <TBODY> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+CenterTagObject centerTag() :
+{
+	CenterTagObject tag = new CenterTagObject();
+}
+{
+	<CENTER> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <CENTER> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+HrTagObject hrTag() :
+{
+	HrTagObject tag = new HrTagObject();
+}
+{
+	<HR> attrs(tag) (<HTML_TAG_END> | <XML_TAG_END>)
+	{
+		return tag;
+	}
+}
+
+SpanTagObject spanTag() :
+{
+	SpanTagObject tag = new SpanTagObject();
+}
+{
+	<SPAN> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <SPAN> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+AreaTagObject areaTag() :
+{
+	AreaTagObject tag = new AreaTagObject();
+}
+{
+	<AREA> attrs(tag) (<HTML_TAG_END> | <XML_TAG_END>)
+	{
+		return tag;
+	}
+}
+
+BaseTagObject baseTag() :
+{
+	BaseTagObject tag = new BaseTagObject();
+}
+{
+	<BASE> attrs(tag) (<HTML_TAG_END> | <XML_TAG_END>)
+	{
+		return tag;
+	}
+}
+
+ParamTagObject paramTag() :
+{
+	ParamTagObject tag = new ParamTagObject();
+}
+{
+	<PARAM> attrs(tag) (<HTML_TAG_END> | <XML_TAG_END>)
+	{
+		return tag;
+	}
+}
+
+ColTagObject colTag() :
+{
+	ColTagObject tag = new ColTagObject();
+}
+{
+	<COL> attrs(tag) (<HTML_TAG_END> | <XML_TAG_END>)
+	{
+		return tag;
+	}
+}
+
+CaptionTagObject captionTag() :
+{
+	CaptionTagObject tag = new CaptionTagObject();
+}
+{
+	<CAPTION> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <CAPTION> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+CiteTagObject citeTag() :
+{
+	CiteTagObject tag = new CiteTagObject();
+}
+{
+	<CITE> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <CITE> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+PreTagObject preTag() :
+{
+	PreTagObject tag = new PreTagObject();
+}
+{
+	<PRE> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <PRE> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+EmTagObject emTag() :
+{
+	EmTagObject tag = new EmTagObject();
+}
+{
+	<EM> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <EM> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+FrameTagObject frameTag() :
+{
+	FrameTagObject tag = new FrameTagObject();
+}
+{
+	<FRAME> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <FRAME> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+FramesetTagObject framesetTag() :
+{
+	FramesetTagObject tag = new FramesetTagObject();
+}
+{
+	<FRAMESET> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <FRAMESET> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+InsTagObject insTag() :
+{
+	InsTagObject tag = new InsTagObject();
+}
+{
+	<INS> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <INS> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+StyleTagObject styleTag() :
+{
+	StyleTagObject tag = new StyleTagObject();
+}
+{
+	<STYLE> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <STYLE> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+ThTagObject thTag() :
+{
+	ThTagObject tag = new ThTagObject();
+}
+{
+	<TH> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <TH> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+SupTagObject supTag() :
+{
+	SupTagObject tag = new SupTagObject();
+}
+{
+	<SUP> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <SUP> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+SubTagObject subTag() :
+{
+	SubTagObject tag = new SubTagObject();
+}
+{
+	<SUB> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <SUB> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+UlTagObject ulTag() :
+{
+	UlTagObject tag = new UlTagObject();
+}
+{
+	<UL> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <UL> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+QTagObject qTag() :
+{
+	QTagObject tag = new QTagObject();
+}
+{
+	<Q> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <Q> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+OlTagObject olTag() :
+{
+	OlTagObject tag = new OlTagObject();
+}
+{
+	<OL> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <OL> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+MapTagObject mapTag() :
+{
+	MapTagObject tag = new MapTagObject();
+}
+{
+	<MAP> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <MAP> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+ITagObject iTag() :
+{
+	ITagObject tag = new ITagObject();
+}
+{
+	<I> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <I> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+H4TagObject h4Tag() :
+{
+	H4TagObject tag = new H4TagObject();
+}
+{
+	<H4> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <H4> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+H5TagObject h5Tag() :
+{
+	H5TagObject tag = new H5TagObject();
+}
+{
+	<H5> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <H5> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+H6TagObject h6Tag() :
+{
+	H6TagObject tag = new H6TagObject();
+}
+{
+	<H6> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <H6> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+DelTagObject delTag() :
+{
+	DelTagObject tag = new DelTagObject();
+}
+{
+	<DEL> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <DEL> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+DlTagObject dlTag() :
+{
+	DlTagObject tag = new DlTagObject();
+}
+{
+	<DL> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <DL> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+AddressTagObject addressTag() :
+{
+	AddressTagObject tag = new AddressTagObject();
+}
+{
+	<ADDRESS> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <ADDRESS> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+AppletTagObject appletTag() :
+{
+	AppletTagObject tag = new AppletTagObject();
+}
+{
+	<APPLET> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <APPLET> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+ObjectTagObject objectTag() :
+{
+	ObjectTagObject tag = new ObjectTagObject();
+}
+{
+	<OBJECT> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <OBJECT> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+TfootTagObject tfootTag() :
+{
+	TfootTagObject tag = new TfootTagObject();
+}
+{
+	<TFOOT> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <TFOOT> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+TtTagObject ttTag() :
+{
+	TtTagObject tag = new TtTagObject();
+}
+{
+	<TT> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <TT> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+ThreadTagObject threadTag() :
+{
+	ThreadTagObject tag = new ThreadTagObject();
+}
+{
+	<THREAD> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <THREAD> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+ColgroupTagObject colgroupTag() :
+{
+	ColgroupTagObject tag = new ColgroupTagObject();
+}
+{
+	<COLGROUP> attrs(tag) <HTML_TAG_END>
+		tags(tag)
+	endTag(tag) <COLGROUP> <HTML_TAG_END>
+	{
+		return tag;
+	}
+}
+
+
+

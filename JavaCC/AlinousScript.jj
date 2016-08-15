@@ -1,0 +1,3916 @@
+options {
+    JDK_VERSION="1.5.0";
+    STATIC=false;
+    UNICODE_INPUT=true;
+	
+	DEBUG_PARSER=false;
+}
+
+PARSER_BEGIN(AlinousScriptParser)
+package org.alinous.parser.script;
+
+import org.alinous.datasrc.types.UpdateType;
+import org.alinous.script.runtime.ArrayPathElement;
+import org.alinous.script.runtime.DomPathElement;
+import org.alinous.script.runtime.IPathElement;
+import org.alinous.script.runtime.PathElement;
+import org.alinous.script.sql.ISQLScriptObject;
+import org.alinous.script.AlinousScript;
+import org.alinous.script.IScriptBlock;
+import org.alinous.script.IScriptSentence;
+import org.alinous.script.sql.SelectSentence;
+import org.alinous.script.sql.UpdateSentence;
+import org.alinous.script.sql.SetClause;
+import org.alinous.script.sql.lock.ForUpdateClause;
+import org.alinous.script.sql.other.SetPair;
+import org.alinous.script.sql.BeginSentence;
+import org.alinous.script.sql.CommitSentence;
+import org.alinous.script.sql.DeleteSentence;
+import org.alinous.script.sql.GroupByClause;
+import org.alinous.script.sql.HavingClause;
+import org.alinous.script.sql.InsertSentence;
+import org.alinous.script.sql.OrderByClause;
+import org.alinous.script.sql.LimitOffsetClause;
+import org.alinous.script.sql.PrepareTransactionSentence;
+import org.alinous.script.sql.RollbackSentence;
+import org.alinous.script.sql.SelectColumns;
+import org.alinous.script.sql.IntoClause;
+import org.alinous.script.sql.FromClause;
+import org.alinous.script.sql.JoinClause;
+import org.alinous.script.sql.other.JoinCondition;
+import org.alinous.script.sql.WhereClause;
+import org.alinous.script.sql.adjustopt.AdjustSet;
+import org.alinous.script.sql.adjustopt.AdjustWhere;
+import org.alinous.script.sql.condition.BetweenClauseExpression;
+import org.alinous.script.sql.condition.ISQLExpression;
+import org.alinous.script.sql.condition.InClauseExpression;
+import org.alinous.script.sql.condition.IsNullClauseExpression;
+import org.alinous.script.sql.condition.LikeExpression;
+import org.alinous.script.sql.condition.OrExpression;
+import org.alinous.script.sql.condition.AndExpression;
+import org.alinous.script.sql.condition.SQLNotExpression;
+import org.alinous.script.sql.condition.TwoClauseExpression;
+import org.alinous.script.sql.condition.ParenthesisExpression;
+import org.alinous.script.sql.ddl.AlterAdd;
+import org.alinous.script.sql.ddl.AlterDrop;
+import org.alinous.script.sql.ddl.AlterRename;
+import org.alinous.script.sql.ddl.AlterTableSentence;
+import org.alinous.script.sql.ddl.CheckDefinition;
+import org.alinous.script.sql.ddl.ColumnTypeDescriptor;
+import org.alinous.script.sql.ddl.CreateIndexSentence;
+import org.alinous.script.sql.ddl.CreateTableSentence;
+import org.alinous.script.sql.ddl.DdlColumnDescriptor;
+import org.alinous.script.sql.ddl.DropIndexSentence;
+import org.alinous.script.sql.ddl.DropTableSentence;
+import org.alinous.script.sql.ddl.ForeignKey;
+import org.alinous.script.sql.ddl.IAlterAction;
+import org.alinous.script.sql.ddl.PrimaryKeys;
+import org.alinous.script.sql.ddl.Unique;
+import org.alinous.script.sql.ddl.plsql.CreateFunctionSentence;
+import org.alinous.script.sql.ddl.plsql.CreateTriggerSentence;
+import org.alinous.script.sql.ddl.plsql.DropFunctionSentence;
+import org.alinous.script.sql.ddl.plsql.DropTriggerSentence;
+import org.alinous.script.sql.statement.ISQLStatement;
+import org.alinous.script.sql.statement.JoinSubQueryTarget;
+import org.alinous.script.sql.statement.SQLAllStatemtet;
+import org.alinous.script.sql.statement.SQLNullConst;
+import org.alinous.script.sql.statement.SQLParenthesisStatement;
+import org.alinous.script.sql.statement.SQLVariable;
+import org.alinous.script.sql.statement.SQLStringConst;
+import org.alinous.script.sql.statement.SQLNumericConst;
+import org.alinous.script.sql.statement.Identifier;
+import org.alinous.script.sql.statement.SQLSubStatement;
+import org.alinous.script.sql.statement.SQLStatement;
+import org.alinous.script.sql.statement.ColumnIdentifier;
+import org.alinous.script.sql.statement.SQLFunctionCallStatement;
+import org.alinous.script.sql.statement.SQLFunctionCallArguments;
+import org.alinous.script.sql.statement.SubQueryStatement;
+import org.alinous.script.sql.other.SelectColumnElement;
+import org.alinous.script.sql.other.TablesList;
+import org.alinous.script.sql.other.TableIdentifier;
+import org.alinous.script.sql.other.ColumnList;
+import org.alinous.script.sql.other.VariableList;
+
+
+import org.alinous.script.basic.BreakSentence;
+import org.alinous.script.basic.ContinueSentence;
+import org.alinous.script.basic.DownloadSentence;
+import org.alinous.script.basic.ElseBlock;
+import org.alinous.script.basic.FunctionCallSentence;
+import org.alinous.script.basic.IncludeSentence;
+import org.alinous.script.basic.PlusPlusSentence;
+import org.alinous.script.basic.RedirectSentence;
+import org.alinous.script.basic.ReferFromSentence;
+import org.alinous.script.basic.ReturnSentence;
+import org.alinous.script.basic.SubstituteSentence;
+import org.alinous.script.basic.SynchronizeBlock;
+import org.alinous.script.basic.UseSentence;
+import org.alinous.script.basic.ValidatorSentence;
+import org.alinous.script.basic.type.BooleanConst;
+import org.alinous.script.basic.type.DoubleConst;
+import org.alinous.script.basic.type.IStatement;
+import org.alinous.script.basic.type.IVariableDescription;
+import org.alinous.script.basic.type.NullConst;
+import org.alinous.script.basic.type.NumericConst;
+import org.alinous.script.basic.type.StringConst;
+import org.alinous.script.basic.type.VariableDescriptor;
+import org.alinous.script.basic.IfBlock;
+import org.alinous.script.basic.WhileBlock;
+import org.alinous.script.basic.DoWhileBlock;
+import org.alinous.script.basic.ForBlock;
+
+import org.alinous.script.basic.condition.DivStmtCondition;
+import org.alinous.script.basic.condition.IScriptCondition;
+import org.alinous.script.basic.condition.DirectCondition;
+import org.alinous.script.basic.condition.MinusStmtCondition;
+import org.alinous.script.basic.condition.ModuloStmtCondition;
+import org.alinous.script.basic.condition.MultipleStmtCondition;
+import org.alinous.script.basic.condition.NotCondition;
+import org.alinous.script.basic.condition.ParenthesisCondition;
+import org.alinous.script.basic.condition.AndCondition;
+import org.alinous.script.basic.condition.OrCondition;
+import org.alinous.script.basic.condition.PlusStmtCondition;
+import org.alinous.script.basic.condition.VariableStmtCondition;
+import org.alinous.script.basic.exception.CatchBlock;
+import org.alinous.script.basic.exception.FinallyBlock;
+import org.alinous.script.basic.exception.ThrowSentence;
+import org.alinous.script.basic.exception.TryBlock;
+import org.alinous.script.basic.parallel.LocalSentence;
+import org.alinous.script.basic.parallel.ParallelBlock;
+
+import org.alinous.script.functions.ArgumentDeclare;
+import org.alinous.script.functions.ArgumentsDeclare;
+import org.alinous.script.functions.FuncDeclarations;
+import org.alinous.script.functions.FunctionDeclaration;
+
+import org.alinous.script.statement.BooleanStatement;
+import org.alinous.script.statement.FunctionCall;
+import org.alinous.script.statement.FuncArguments;
+import org.alinous.script.statement.ModuloStatement;
+import org.alinous.script.statement.MultipleStatement;
+import org.alinous.script.statement.ParenthesisElemenet;
+import org.alinous.script.statement.PlusPlusStatement;
+import org.alinous.script.statement.PlusStatement;
+import org.alinous.script.statement.SubStatement;
+
+
+public class AlinousScriptParser {
+	private String filePath;
+    private AlinousScript lastScript;
+    
+    public AlinousScript getLastScript()
+    {
+    	return this.lastScript;
+    }
+    
+	public void setFilePath(String filePath)
+	{
+		this.filePath = filePath;
+	}
+	
+}
+
+PARSER_END(AlinousScriptParser)
+
+SKIP :
+{
+    " " |
+    "\t" |
+    "\n" |
+    "\r" 
+}
+<*>TOKEN :
+{
+	<#NOTASCII: ["\u0080"-"\ufaff"]>	|
+	<#ASCILETTER: ["a"-"z"] | ["A"-"Z"] | ["_"]> |
+	<#NUMBERLETTER: ["0"-"9"]> |
+
+	
+	<#CHARACTOR: <NOTASCII> | <ASCILETTER> | <NUMBERLETTER> >
+}
+
+TOKEN :
+{
+	<SEMI_COLON: ";">		|
+	<EQUALS: "=">			|
+	<ASTERISK: "*">			|
+	<PLUSPLUS: "++">		|
+	<PLUS: "+">				|
+	<MINUSMINUS: "--">		|
+	<MINUS: "-">			|
+	<DIV: "/">				|
+	<MODULO: "%">			|
+	<LOGICAL_AND: "&&">		|
+	<LOGICAL_OR: "||">		|
+	<BIT_AND: "&">			|
+	<BIT_OR: "|">			|
+	<L_PARENTHESIS: "(">	|
+	<R_PARENTHESIS: ")">	|
+	<L_BRACKET: "[">		|
+	<R_BRACKET: "]">		|
+	<DOLLAR: "$">			|
+	<DOT: ".">				|
+	<COMMA: ",">			|
+	<SQL_NOT_EQUALS: "<>">	|
+	<AT_AT_MARK: "@@">			|
+	<AT_MARK: "@">			|
+	<L_BRACE: "{">			|
+	<R_BRACE: "}">			|
+	<CMP_EQUALS: "==">		|
+	<CMP_NOTEQUALS: "!=">	|
+	<GT: ">">				|
+	<GEQ: ">=">				|
+	<LT: "<">				|
+	<LEQ: "<=">				|
+	<NOT: "!">				|
+	<COLON: ":">
+}
+
+
+TOKEN [IGNORE_CASE] :
+{
+	<SELECT: "SELECT">	|
+	<INSERT: "INSERT">	|
+	<UPDATE: "UPDATE">	|
+	<DELETE: "DELETE">	|
+	<INTO: "INTO">		|
+	<FROM: "FROM">		|
+	<WHERE: "WHERE">	|
+	<OR: "OR">			|
+	<AND: "AND">		|
+	<LIKE: "LIKE">		|
+	<ESCAPE: "<ESCAPE>">	|
+	<LEFT: "LEFT">		|
+	<RIGHT: "RIGHT">	|
+	<NATURAL: "NATURAL">|
+	<INNER: "INNER">	|
+	<OUTER: "OUTER">	|
+	<FULL: "FULL">		|
+	<JOIN: "JOIN">		|
+	<CROSS: "CROSS">	|
+	<SET: "SET">		|
+	<VALUES: "VALUES">	|
+	<IF: "IF">			|
+	<ELSE: "ELSE">		|
+	<GROUP: "GROUP">	|
+	<BY: "BY">			|
+	<HAVING: "HAVING">	|
+	<ORDER: "ORDER">	|
+	<ASC: "ASC">		|
+	<DESC: "DESC">		|
+	
+	<LIMIT: "LIMIT">	|
+	<OFFSET: "OFFSET">	|
+	<ON: "ON">			|
+	<SQL_NOT: "NOT">	|
+	<AS: "AS">			|
+	<DISTINCT: "DISTINCT">		|
+	
+	<SHARE: "SHARE">	|
+	<NOWAIT: "NOWAIT">	|
+	<OF: "OF">			|
+	
+	<IN: "IN">			|
+	<BETWEEN: "BETWEEN">	|
+	<IS: "IS">			|
+	
+	<BEGIN: "BEGIN">	|
+	<PREPARE: "PREPARE">	|
+	<TRANSACTION: "TRANSACTION">	|
+	<ISOLATION: "ISOLATION">	|
+	<LEVEL: "LEVEL">	|
+	
+	<COMMIT: "COMMIT">	|
+	<PREPARED: "PREPARED">	|
+	<END: "END">		|
+	<ROLLBACK: "ROLLBACK">		|
+
+	<CREATE: "CREATE">		|
+	<DROP: "DROP">		|
+	<ALTER: "ALTER">	|
+	<TABLE: "TABLE">	|
+	<SQL_DEFAULT: "DEFAULT">	|
+	<ADD: "ADD">	|
+	<RENAME: "RENAME">	|
+	<COLUMN: "COLUMN">	|
+	<TO: "TO">	|
+	<PRIMARY: "PRIMARY">	|
+	<KEY: "KEY">	|
+	<UNIQUE: "UNIQUE">	|
+	<CHECK: "CHECK">	|
+	<RETURNS: "RETURNS">	|
+	<SETOF: "SETOF">	|
+	<LANGUAGE: "LANGUAGE">	|
+	<REPLACE: "REPLACE">	|
+	<INDEX: "INDEX">	|
+	<USING: "USING">	|
+	
+	<EACH: "EACH">		|
+	<ROW: "ROW">		|
+	<STATEMENT: "STATEMENT">|
+	<EXECUTE: "EXECUTE">	|
+	<PROCEDURE: "PROCEDURE">		|
+	<EXISTS: "EXISTS">	|
+	
+	<TRIGGER: "TRIGGER">	|
+	<BEFORE: "BEFORE">	|
+	<AFTER: "AFTER">	|
+	
+	<FOREIGN: "FOREIGN">	|
+	<REFERENCES: "REFERENCES">	|
+	
+	<ADJUST_WHERE: "ADJUST_WHERE">	|
+	<ADJUST_SET: "ADJUST_SET">	|
+	
+	<TRUE: "TRUE">		|
+	<FALSE: "FALSE">	|
+	<BOOL: "BOOL">		|
+	
+	<NULL: "NULL">		|
+	
+	<FUNCTION: "FUNCTION">	|
+	<RETURN: "RETURN">	|
+	<USE: "USE">		|
+	<WHILE: "WHILE">	|
+	<DO: "DO">			|
+	<FOR: "FOR">		|
+	<BREAK: "BREAK">	|
+	<CONTINUE: "CONTINUE">	|
+	
+	<TRY: "TRY">	|
+	<CATCH: "CATCH">	|
+	<FINALLY: "FINALLY">	|
+	
+	<DOWNLOAD: "download">	|
+	<REDIRECT: "redirect">	|
+	<INCLUDE: "include">	|
+	<REFERER_FROM : "refer_from"> |
+	<VALIDATOR: "validator"> |
+	
+	<SYNCHRONIZED: "synchronized">	|
+	
+	<THROW: "throw"> |
+	<PARALLEL: "parallel"> |
+	<LOCAL: "local">
+	
+}
+
+
+TOKEN :
+{
+	<IDENTIFIER: <ASCILETTER> (<ASCILETTER> | <NUMBERLETTER>)*> |
+	<NUMERIC: (<MINUS>)? <NUMBERLETTER> (<NUMBERLETTER>)*> |
+	<DOUBLE: (<MINUS>)? <NUMBERLETTER> (<NUMBERLETTER>)* "." (<MINUS>)? <NUMBERLETTER> (<NUMBERLETTER>)*>
+}
+
+
+MORE:
+{
+	< "\"" > :DQ_STR |
+	< "'"  > :SQ_STR |
+	< "/*" > :COMM	 |
+	< "//" > :L_COMM
+}
+
+<L_COMM>SPECIAL_TOKEN:
+{
+	< "\n" > : DEFAULT
+}
+
+<L_COMM>MORE:
+{
+	< ~[] >
+}
+
+<COMM>SPECIAL_TOKEN:
+{
+	< "*/" > : DEFAULT
+}
+
+<COMM>MORE:
+{
+	< ~[] >
+}
+
+<DQ_STR>TOKEN :
+{
+	<DQSTRLIT: "\"" >
+	{
+		matchedToken.image = image.substring(1, image.length() - 1);
+	} :DEFAULT
+}
+
+<DQ_STR>MORE:
+{
+	< "\\\\" >
+}
+
+<DQ_STR>MORE:
+{
+	< "\\\"" >
+}
+
+<DQ_STR>MORE:
+{
+	< ~[] >
+}
+
+<SQ_STR>TOKEN :
+{
+	<SQSTRLIT: "'" >
+	{
+		String img = image.substring(1, image.length() - 1);
+		matchedToken.image = img.replaceAll("''", "'");
+	} :DEFAULT
+}
+
+<SQ_STR>MORE:
+{
+	< "''" >
+}
+
+<SQ_STR>MORE:
+{
+	< "\\\\" >
+}
+
+<SQ_STR>MORE:
+{
+	< "\\'" >
+}
+
+<SQ_STR>MORE:
+{
+	< ~[] >
+}
+
+
+AlinousScript parse() :
+{
+	AlinousScript topObj = new AlinousScript(this.filePath);
+	IScriptSentence sentence = null;
+	IncludeSentence incSentence = null;
+	ReferFromSentence refSentence = null;
+	ValidatorSentence validatorSentence = null;
+	FuncDeclarations funcDec = null;
+	
+	this.lastScript = topObj;
+}
+{
+
+
+	(
+		incSentence = includeSentence() <SEMI_COLON>
+		{
+			topObj.addInclude(incSentence);
+		}
+		|
+		refSentence = referFromSentence() <SEMI_COLON>
+		{
+			topObj.addReferFrom(refSentence);
+		}
+		|
+		validatorSentence = validatorSentence() <SEMI_COLON>
+		{
+			topObj.addValidatorSentence(validatorSentence);
+		}
+	)*
+
+    ( (LOOKAHEAD(3) sentence=block() | sentence=sentence() <SEMI_COLON>  )
+    	{
+    		topObj.addSentence(sentence);
+		}
+    )*
+    funcDec = funcDeclarations()
+    
+    <EOF>
+    {
+    	topObj.setFuncDeclarations(funcDec);
+    	return topObj;
+    }
+}
+
+IncludeSentence includeSentence() :
+{
+	IncludeSentence sentence = new IncludeSentence();
+	FuncArguments args = null;
+	Token t1 = null;
+}
+{
+	t1 = <INCLUDE>
+	<L_PARENTHESIS> args=funcArguments() <R_PARENTHESIS>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		sentence.setArgs(args);
+		
+		return sentence;
+	}
+}
+
+ReferFromSentence referFromSentence() :
+{
+	ReferFromSentence sentence = new ReferFromSentence();
+	FuncArguments args = null;
+	Token t1 = null;
+}
+{
+	t1 = <REFERER_FROM>
+	<L_PARENTHESIS> args=funcArguments() <R_PARENTHESIS>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		sentence.setArgs(args);
+		
+		return sentence;
+	}	
+}
+
+ValidatorSentence validatorSentence() :
+{
+	ValidatorSentence sentence = new ValidatorSentence();
+	FuncArguments args = null;
+	Token t1 = null;
+}
+{
+	t1 = <VALIDATOR>
+	<L_PARENTHESIS> args=funcArguments() <R_PARENTHESIS>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		sentence.setArgs(args);
+		
+		return sentence;
+	}	
+}
+
+FuncDeclarations funcDeclarations() :
+{
+	FuncDeclarations declarations = new FuncDeclarations(this.filePath);
+	FunctionDeclaration declare = null;
+}
+{
+	(
+		declare=functionDeclare()
+		{
+			declarations.addFunction(declare);
+		}
+	)*
+	{
+		return declarations;
+	}
+}
+
+FunctionDeclaration functionDeclare() :
+{
+	FunctionDeclaration funcDeclare = new FunctionDeclaration(this.filePath);
+	ArgumentsDeclare arg = null;
+	
+	Token retToken = null;
+	DomPathElement packageName = null;
+	DomPathElement funcName = null;
+}
+{
+	retToken=<FUNCTION>
+	[LOOKAHEAD(2) packageName=domPathElement() <DOT>] funcName=domPathElement()
+	<L_PARENTHESIS>
+	[arg = argumentsDeclare()]
+	<R_PARENTHESIS>
+	<L_BRACE> sentences(funcDeclare) <R_BRACE>
+	{
+		funcDeclare.setLine(retToken.beginLine);
+		funcDeclare.setLinePosition(retToken.beginColumn);
+		
+		funcDeclare.setReturnType(retToken.image);
+		
+		if(packageName != null){
+			funcDeclare.setPackageName(packageName.getImage());
+		}
+		
+		funcDeclare.setFuncName(funcName.getImage());
+		if(arg != null){
+			funcDeclare.setArguments(arg);
+		}
+		
+		return funcDeclare;
+	}
+	
+}
+
+ArgumentsDeclare argumentsDeclare() :
+{
+	ArgumentsDeclare argDec = new ArgumentsDeclare();
+	ArgumentDeclare dec = null;
+	Token prefix = null;
+	DomPathElement name = null;
+}
+{
+	(prefix=<DOLLAR> | prefix=<AT_MARK>) name=domPathElement()
+	{
+		dec = new ArgumentDeclare();
+		
+		dec.setPrefix(prefix.image);
+		dec.setName(name.getImage());
+		
+		argDec.addArgument(dec);
+	}
+	
+	(<COMMA> (prefix=<DOLLAR> | prefix=<AT_MARK>) name=domPathElement()
+		{
+			dec = new ArgumentDeclare();
+			
+			dec.setPrefix(prefix.image);
+			dec.setName(name.getImage());
+			
+			argDec.addArgument(dec);
+		}
+	)*
+	
+	{
+		return argDec;
+	}
+	
+}
+
+
+void sentences(IScriptBlock parent) :
+{
+	IScriptSentence stnc;
+}
+{
+	( (LOOKAHEAD(3) stnc=sentence() <SEMI_COLON> | stnc=block())
+	{
+		 parent.addSentence(stnc);
+	}
+	)*
+}
+
+
+IScriptSentence sentence() :
+{
+	IScriptSentence sentence;
+	Token t1 = null;
+}
+{
+	
+	(
+	LOOKAHEAD(3) 
+	sentence=commitSentence()	|
+	sentence=prepareTransactionSentence() |
+	sentence=beginSentence()	|
+	sentence=rollbackSentence()	|
+	LOOKAHEAD(2) sentence=select() |
+	LOOKAHEAD(2) sentence=update() |
+	LOOKAHEAD(2) sentence=delete() |
+	LOOKAHEAD(2) sentence=insert() |
+	LOOKAHEAD(3) sentence=substituteSentence() |
+	LOOKAHEAD(3)  sentence=functionCallSentence() |
+	LOOKAHEAD(3)  sentence=returnSentence()	|
+	LOOKAHEAD(3)  sentence=redirectSentence()	|
+	sentence=downloadSentence()	|
+	sentence=breakSentence()	|
+	sentence=continueSentence()	|
+	sentence=useSentence()		|
+	sentence=throwSentence()	|
+	(
+		t1=<CREATE>
+		(sentence=createTableSentence(t1)	|
+		sentence=createFunctionSentence(t1)	|
+		sentence=createTriggerSentence(t1)	|
+		sentence=createIndexCentence(t1))
+	
+	)
+	|
+	(
+		t1=<DROP>
+		(sentence=dropTableSentence(t1)	|
+		sentence=dropFunctionSentence(t1)	|
+		sentence=dropTriggerSentence(t1) |
+		sentence=dropIndexSentence(t1) )
+	)
+	|
+	
+	sentence=alterTableSentence()	|
+		
+	sentence=plusPlusSentence() |
+	 sentence=localSentence()
+	)
+	{
+		return sentence;
+	}
+}
+
+IScriptSentence block() :
+{
+	IScriptSentence sentence = null;
+}
+{
+	(  
+	sentence=ifBlock()	|
+	sentence=whileBlock() |
+	sentence=doWhileBlock()	|
+	sentence=forBlock() |
+	sentence=synchronizedBlock() |
+	sentence=parallelBlock() |
+	sentence=tryBlock()
+	)
+	{
+		return sentence;
+	}
+}
+
+ParallelBlock  parallelBlock() :
+{
+	ParallelBlock parallelBlock = new ParallelBlock(this.filePath);
+	Token t_parallel = null;
+	IStatement stmt = null;
+	
+	IVariableDescription operand = null;
+}
+{
+	t_parallel=<PARALLEL> <L_PARENTHESIS> stmt=statement() <R_PARENTHESIS>
+	<L_BRACE> sentences(parallelBlock) <R_BRACE>
+	{
+		parallelBlock.setLine(t_parallel.beginLine);
+		parallelBlock.setLinePosition(t_parallel.beginColumn);
+		
+		parallelBlock.setStmt(stmt);
+		parallelBlock.setOperand(operand);
+		
+		return parallelBlock;
+	}
+}
+
+TryBlock tryBlock() :
+{
+	TryBlock tryblock = new TryBlock(this.filePath);
+	CatchBlock catchBlock = new CatchBlock(this.filePath);
+	VariableDescriptor variableDesc = null;
+	FinallyBlock finallyBlock = new FinallyBlock(this.filePath);
+	Token t_try = null;
+	Token t_catch = null;
+	Token t_finally = null;
+}
+{
+	t_try=<TRY>
+	<L_BRACE> sentences(tryblock) <R_BRACE>
+	{
+		tryblock.setLine(t_try.beginLine);
+		tryblock.setLinePosition(t_try.beginColumn);
+	}
+	[
+		t_catch=<CATCH> <L_PARENTHESIS> variableDesc=scriptVariable() <R_PARENTHESIS>
+		<L_BRACE> sentences(catchBlock) <R_BRACE>
+		{
+			catchBlock.setLine(t_catch.beginLine);
+			catchBlock.setLinePosition(t_catch.beginColumn);
+			
+			catchBlock.setVariableDescriptor(variableDesc);
+			
+			tryblock.setCatchBlock(catchBlock);
+		}
+	]
+	[
+		t_finally=<FINALLY>
+		<L_BRACE> sentences(finallyBlock) <R_BRACE>
+		{
+			finallyBlock.setLine(t_finally.beginLine);
+			finallyBlock.setLinePosition(t_finally.beginColumn);
+			
+			tryblock.setFinallyBlock(finallyBlock);
+		}
+	]
+	{
+		
+		return tryblock;
+	}
+	
+}
+
+BeginSentence beginSentence() :
+{
+	BeginSentence sentence = new BeginSentence();
+	Identifier level1 = null;
+	Identifier level2 = null;
+	
+	Token t = null;
+}
+{
+	t=<BEGIN>
+		[ <TRANSACTION> <ISOLATION> <LEVEL> [level1=identifier()  [level2=identifier()]  ] ]
+	{
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		sentence.setLevel1(level1);
+		sentence.setLevel2(level2);
+		
+		return sentence;
+	}
+
+}
+
+PrepareTransactionSentence prepareTransactionSentence() :
+{
+	PrepareTransactionSentence sentence = new PrepareTransactionSentence();
+	IStatement trxIdentifier = null;
+	Token t = null;
+}
+{
+	t=<PREPARE> <TRANSACTION> trxIdentifier=statement()
+	
+	{
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		sentence.setTrxIdentifier(trxIdentifier);
+		
+		return sentence;
+	}
+}
+
+CommitSentence commitSentence() :
+{
+	CommitSentence sentence = new CommitSentence();
+	IStatement trxIdentifier = null;
+	Token t = null;
+}
+{
+	(t=<COMMIT> | t=<END>) [<PREPARED> trxIdentifier=statement() ]
+	{
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		sentence.setTrxIdentifier(trxIdentifier);
+		
+		return sentence;
+	}
+}
+
+RollbackSentence rollbackSentence() :
+{
+	RollbackSentence sentence = new RollbackSentence();
+	IStatement trxIdentifier = null;
+	Token t = null;
+}
+{
+	t=<ROLLBACK> [<PREPARED> trxIdentifier=statement() ]
+	{
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		sentence.setTrxIdentifier(trxIdentifier);
+		
+		return sentence;
+	}
+}
+
+SelectSentence select() :
+{
+	SelectSentence sentence = new SelectSentence();
+	SelectColumns columns = null;
+	IntoClause into = null;
+	FromClause from = null;
+	WhereClause where = null;
+	GroupByClause grp = null;
+	OrderByClause ord = null;
+	LimitOffsetClause limitoffset = null;
+	ForUpdateClause forUpdate = null;
+	AdjustWhere adjustWhere = new AdjustWhere();
+	
+	Token distinctToken = null;
+	
+	Token t = null;
+}
+{
+	t=<SELECT> [LOOKAHEAD(2) distinctToken=<DISTINCT>] columns=selectColumns() [into=into()] [from=from()] [where=where()]
+	[grp=groupby()] [ord=orderby()] limitoffset=limit() [forUpdate=forUpdate()] [adjustWhere=adjustWhere()]
+	{
+		sentence.setColumns(columns);
+		sentence.setInto(into);
+		sentence.setFrom(from);
+		sentence.setWhere(where);
+		sentence.setGroupBy(grp);
+		sentence.setOrderby(ord);
+		sentence.setLimitOffset(limitoffset);
+		sentence.setForUpdate(forUpdate);
+		sentence.setAdjustWhere(adjustWhere);
+		
+		if(distinctToken != null){
+			sentence.setDistinct(distinctToken.image);
+		}
+		
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		return sentence;
+	}
+}
+
+
+ForUpdateClause forUpdate():
+{
+	ForUpdateClause forUpdate = new ForUpdateClause();
+	Token type = null;
+	Token nowait = null;
+	TablesList tables = null;
+}
+{
+	<FOR> (type=<UPDATE> | type=<SHARE>) [<OF> tables=tables()] [nowait=<NOWAIT>]
+	{
+		forUpdate.setType(type.image);
+		
+		if(nowait != null){
+			forUpdate.setWait(nowait.image);
+		}
+		
+		if(tables != null){
+			forUpdate.setTables(tables);
+		}
+		
+		return forUpdate;
+	}
+}
+
+LimitOffsetClause limit() :
+{
+	LimitOffsetClause limitoffset = new LimitOffsetClause();
+	ISQLStatement limit = null;
+	ISQLStatement offset = null;
+	
+}
+{
+	[<LIMIT> limit=variable()] [<OFFSET> offset=variable()] 
+	{
+		if(limit != null){
+			limitoffset.setLimit(limit);
+		}
+		if(offset != null){
+			limitoffset.setOffset(offset);
+		}
+		
+		return limitoffset;
+	}
+	
+}
+
+OrderByClause orderby() : 
+{
+	OrderByClause ord = new OrderByClause();
+	ColumnList colList = null;
+}
+{
+	<ORDER> <BY> colList=columnList()
+	{
+		ord.setColumnList(colList);
+		
+		return ord;
+	}
+}
+
+ColumnList columnList() :
+{
+	ColumnList colList = new ColumnList();
+	ColumnIdentifier col;
+	Token t = null;
+	SQLVariable variable = null;
+	IPathElement pathElement = null;
+	SelectColumnElement colEl = null;
+}
+{
+	(
+		col=columnIdentifier() [t=<ASC> | t=<DESC>]
+		{
+			colList = new ColumnList();
+			
+			if(t != null){
+				colList.addColumns(col, t.image);
+			}
+			else{
+				colList.addColumns(col);
+			}
+			
+		}
+		|
+		<DOLLAR> pathElement=domPath() [t=<ASC> | t=<DESC>]
+		{
+			colList = new ColumnList();
+			
+			variable = new SQLVariable();
+			variable.setPathElement(pathElement);
+			variable.setPrefix("$");
+			
+			colEl = new SelectColumnElement();
+			colEl.setColumnName(variable);
+			
+			if(t != null){
+				colList.addColumns(colEl, t.image);
+			}
+			else{
+				colList.addColumns(colEl);
+			}
+		}
+		|
+		<AT_MARK> pathElement=domPath() [t=<ASC> | t=<DESC>]
+		{
+			colList = new ColumnList();
+			
+			variable = new SQLVariable();
+			variable.setPathElement(pathElement);
+			variable.setPrefix("@");
+			
+			colEl = new SelectColumnElement();
+			colEl.setColumnName(variable);
+			
+			if(t != null){
+				colList.addColumns(colEl, t.image);
+			}
+			else{
+				colList.addColumns(colEl);
+			}
+		}
+		
+	)
+	(
+		<COMMA>
+		(
+			col=columnIdentifier() [t=<ASC> | t=<DESC>]
+			{
+				if(t != null){
+					colList.addColumns(col, t.image);
+				}
+				else{
+					colList.addColumns(col);
+				}
+			}
+			|
+			<DOLLAR> pathElement=domPath() [t=<ASC> | t=<DESC>]
+			{
+				variable = new SQLVariable();
+				variable.setPathElement(pathElement);
+				variable.setPrefix("$");
+				
+				colEl = new SelectColumnElement();
+				colEl.setColumnName(variable);
+				
+				if(t != null){
+					colList.addColumns(colEl, t.image);
+				}
+				else{
+					colList.addColumns(colEl);
+				}
+			}
+		)
+	)*
+	{
+		return colList;
+	}
+}
+
+GroupByClause groupby() :
+{
+	GroupByClause grp = new GroupByClause();
+	ColumnList colList = null;
+	HavingClause having = null;
+}
+{
+	<GROUP> <BY> colList=columnList() [having=having()]
+	{
+		grp.setColList(colList);
+		grp.setHaving(having);
+		
+		return grp;
+	}
+}
+
+HavingClause having() :
+{
+	HavingClause having = new HavingClause();
+	ISQLExpression exp = null;
+}
+{
+	<HAVING> exp=orExp()
+	{
+		having.setExpression(exp);
+		return having;
+	}
+}
+
+
+SelectColumns selectColumns() :
+{
+	SelectColumns cols = new SelectColumns();
+	ColumnList colList;
+	ISQLStatement col;
+	SelectColumnElement colElement = null;
+	Identifier asId = null;
+}
+{
+	<ASTERISK>
+	{
+		return cols;
+	}
+	|
+	(LOOKAHEAD(2) col=sqlFunctionCall() | col=columnIdentifier() |  col=sqlSubQuery()) 
+		[LOOKAHEAD(2) [<AS>] asId=identifier()]
+	{
+		colList = new ColumnList();
+		
+		colElement = new SelectColumnElement();
+		colElement.setColumnName(col);
+		
+		if(asId != null){
+			colElement.setAsName(asId);
+			asId = null;
+		}
+		
+		colList.addColumns(colElement);
+	} 
+	(<COMMA> (LOOKAHEAD(2) col=sqlFunctionCall() | col=columnIdentifier() |  col=sqlSubQuery())
+			[ LOOKAHEAD(2) [<AS>] asId=identifier()]
+		{
+			colElement = new SelectColumnElement();
+			colElement.setColumnName(col);
+			
+			if(asId != null){
+				colElement.setAsName(asId);
+				asId = null;
+			}
+			
+			colList.addColumns(colElement);
+		}
+	)*
+	{
+		cols.setColumns(colList);
+		
+		return cols;
+	}
+	
+}
+
+
+IntoClause into() :
+{
+	IntoClause into = new IntoClause();
+	Identifier val = new Identifier();
+	Token t = null;
+}
+{
+	<INTO> t=<IDENTIFIER>
+	{
+		val.setName(t.image);
+		into.setVariable(val);
+		
+		return into;
+	}
+}
+
+
+FromClause from() :
+{
+	FromClause from = new FromClause();
+	TablesList tableList = null;
+	SelectSentence selectSentence = null;
+	Identifier asId = null;
+}
+{
+	<FROM>
+	(
+		LOOKAHEAD(2)
+		(
+			tableList=tables()
+			{
+				from.setTableList(tableList);
+			}
+		)
+			|
+		(
+			<L_PARENTHESIS> selectSentence=select() <R_PARENTHESIS> <AS> asId=identifier()
+			{
+				from.setSelectSentence(selectSentence);
+				from.setAsId(asId);
+			}
+		)
+	)
+	{
+		return from;
+	}
+
+}
+
+TablesList tables() :
+{
+	TablesList tblList = new TablesList();
+	ISQLScriptObject tbl = null;
+}
+{
+	
+	tbl=select_table()
+	{
+		tblList.addTable(tbl);		
+	}
+	(
+		<COMMA> tbl=select_table()
+		{
+			tblList.addTable(tbl);		
+		}
+	)*
+	{
+		return tblList;
+	}
+}
+
+
+TableIdentifier table() :
+{
+	TableIdentifier tbl = new TableIdentifier();
+	Token t1 = null;
+	Token t2 = null;
+	Token t3 = null;
+	SQLVariable variable = null;
+	IPathElement pathElement = null;
+}
+{
+	(
+		<DOLLAR> pathElement=domPath()
+		{
+			variable = new SQLVariable();
+			variable.setPathElement(pathElement);
+			variable.setPrefix("$");
+			
+			tbl.setVariable(variable);
+		}
+		| 
+		(t1=<IDENTIFIER> [<DOT> t2=<IDENTIFIER>])
+	)
+	[LOOKAHEAD(2)[<AS>] t3=<IDENTIFIER>]
+	{
+		if(t2 == null && t1 != null){
+			tbl.setTableName(t1.image);
+		}else if(t1 != null){
+			tbl.setDatabaseName(t1.image);
+			tbl.setTableName(t2 != null ? t2.image : null);
+		}
+		
+		if(t3 != null){
+			tbl.setAsName(t3.image);
+		}
+		
+		
+		return tbl;
+	}
+}
+
+
+ISQLScriptObject select_table() :
+{
+	ISQLScriptObject j1 = null;
+}
+{
+	j1=join()
+	{
+		return j1;
+	}
+}
+
+
+
+ISQLScriptObject join() :
+{
+	JoinClause join = null;
+	ISQLScriptObject left = null;
+	ISQLScriptObject right = null;
+	JoinCondition cnd = null;
+}
+{
+	left=joinTarget()
+	{
+		
+	}
+	(
+	<JOIN> right=joinTarget() cnd=joinCondition()
+	{
+		join = new JoinClause();
+		join.setJoinType(JoinClause.DEFAULT);
+		join.setLeft(left);
+		join.setRight(right);
+		join.setCondition(cnd);
+	}
+	|
+
+	<INNER> <JOIN> right=joinTarget() [cnd=joinCondition()]
+	{
+		join = new JoinClause();
+		join.setJoinType(JoinClause.INNER_JOIN);
+		join.setLeft(left);
+		join.setRight(right);
+		join.setCondition(cnd);
+	}
+	|
+
+	<LEFT> [<OUTER>] <JOIN> right=joinTarget() [cnd=joinCondition()]
+	{
+		join = new JoinClause();
+		join.setJoinType(JoinClause.LEFT_JOIN);
+		join.setLeft(left);
+		join.setRight(right);
+		join.setCondition(cnd);
+	}
+	|
+
+	<RIGHT> [<OUTER>] <JOIN> right=joinTarget() [cnd=joinCondition()]
+	{
+		join = new JoinClause();
+		join.setJoinType(JoinClause.RIGHT_JOIN);
+		join.setLeft(left);
+		join.setRight(right);
+		join.setCondition(cnd);
+	}
+	|
+
+	<NATURAL> [ ( <RIGHT> | <LEFT> ) [<OUTER>]] <JOIN> right=joinTarget()
+	{
+		join = new JoinClause();
+		join.setJoinType(JoinClause.NATURAL_JOIN);
+		join.setLeft(left);
+		join.setRight(right);
+	}
+	|
+	
+	<CROSS> <JOIN> right=joinTarget() [cnd=joinCondition()]
+	{
+		join = new JoinClause();
+		join.setJoinType(JoinClause.CROSS_JOIN);
+		join.setLeft(left);
+		join.setRight(right);
+		join.setCondition(cnd);
+	}
+	)?
+	{
+		if(join == null){
+			return left;
+		}
+		return join;
+	}
+}
+
+ISQLScriptObject joinTarget() :
+{
+	ISQLScriptObject target = null;
+}
+{
+	(target=table() | LOOKAHEAD(2) target=joinSubQueryTarget() |  <L_PARENTHESIS> target=join() <R_PARENTHESIS>)
+	{
+		return target;
+	}
+}
+
+ISQLScriptObject joinSubQueryTarget() :
+{
+	JoinSubQueryTarget target = new JoinSubQueryTarget();
+	SelectSentence selectSentence = null;
+	Token t = null;
+}
+{
+	<L_PARENTHESIS>		
+		selectSentence=select()
+	<R_PARENTHESIS>  <AS> t=<IDENTIFIER>
+	{
+		target.setSelectSentence(selectSentence);
+		target.setAsName(t.image);
+		return target;
+	}
+}
+
+JoinCondition joinCondition() :
+{
+	JoinCondition cnd = new JoinCondition();
+	ISQLExpression exp = null;
+}
+{
+	<ON> exp=orExp()
+	{
+		cnd.setExpression(exp);
+		return cnd;
+	}
+}
+
+
+WhereClause where() :
+{
+	WhereClause where = new WhereClause();
+	ISQLExpression exp = null;
+}
+{
+	<WHERE> exp=orExp()
+	{
+		where.setExpression(exp);
+	
+		return where;
+	}
+}
+
+
+ISQLExpression orExp() :
+{
+	ISQLExpression fexp = null;
+	ISQLExpression exp = null;
+	OrExpression or = null;
+	
+}
+{
+	fexp=andExp()
+	 (LOOKAHEAD(2) <OR> exp=andExp()
+	{
+		if(or == null){
+			or = new OrExpression();
+			or.addExpressions(fexp);
+		}
+		
+		or.addExpressions(exp);
+	}
+	)*
+	{
+		if(or != null){
+			return or;
+		}
+		return fexp;
+	}
+	
+}
+
+ISQLExpression andExp() :
+{
+	ISQLExpression fexp = null;
+	ISQLExpression exp = null;
+	AndExpression and = null;
+}
+{
+	fexp=parenthesisExp()
+	(LOOKAHEAD(2) <AND> exp=parenthesisExp()
+	{
+		if(and == null){
+			and = new AndExpression();
+			and.addExpressions(fexp);
+		}
+		
+		and.addExpressions(exp);
+	}	
+	)*
+	{
+		if(and != null){
+			return and;
+		}
+		return fexp;
+	}
+}
+
+ISQLExpression parenthesisExp() :
+{
+	ISQLExpression exp = null;
+}
+{
+	LOOKAHEAD(2) <L_PARENTHESIS> exp=orExp() <R_PARENTHESIS>
+	{
+		ParenthesisExpression pexp = new ParenthesisExpression();
+		pexp.addExpressions(exp);
+		
+		return pexp;
+	}
+	| exp=sqlNotExpression()
+	{
+		return exp;
+	}
+}
+
+ISQLExpression sqlNotExpression() :
+{
+	SQLNotExpression sqlNotExp = null;
+	ISQLExpression exp = null;
+	ISQLStatement top = null;
+}
+{
+	LOOKAHEAD(2) <SQL_NOT> exp=orExp()
+	{
+		sqlNotExp = new SQLNotExpression();
+		sqlNotExp.addExpressions(exp);
+		
+		return sqlNotExp;
+	}
+	| LOOKAHEAD(2) exp=inClauseExpression()
+	{
+		return exp;
+	}
+	|LOOKAHEAD(2) 	( top=sqlStatement()
+			(
+				exp=inClauseExpression() |
+				exp=betweenClauseExpression() |
+				exp=isNullExpression() |
+				exp=twoClauseExpression()
+			)
+		)
+	{
+		if(exp instanceof InClauseExpression){
+			((InClauseExpression)exp).setTop(top);
+		}
+		else if(exp instanceof BetweenClauseExpression){
+			((BetweenClauseExpression)exp).setTop(top);
+		}
+		else if(exp instanceof IsNullClauseExpression){
+			((IsNullClauseExpression)exp).setStmt(top);
+		}
+		else if(exp instanceof TwoClauseExpression){
+			((TwoClauseExpression)exp).setLeft(top);
+		}
+		else if(exp instanceof LikeExpression){
+			((LikeExpression)exp).setLeft(top);
+		}
+		
+		return exp;
+	}
+
+	
+}
+
+ISQLExpression isNullExpression() :
+{
+	IsNullClauseExpression exp = new IsNullClauseExpression();
+	Token t  = null;
+}
+{
+	<IS> [t=<SQL_NOT>] <NULL>
+	{
+		if(t != null){
+			exp.setNot(true);
+		}
+		
+		return exp;
+	}
+}
+
+
+ISQLExpression inClauseExpression() :
+{
+	InClauseExpression inClause = new InClauseExpression();
+	
+	Object inElement = null;
+}
+{
+	<IN> inElement=inElement()
+	{
+		if(inElement instanceof VariableList){
+			inClause.setValList((VariableList)inElement);
+		}
+		else if(inElement instanceof SubQueryStatement){
+			inClause.setSubQuery((SubQueryStatement)inElement);
+		}
+		
+		return inClause;
+	}
+}
+
+Object inElement() :
+{
+	SubQueryStatement subQuery = null;
+	SelectSentence selectSentence = null;
+	
+	VariableList vals = new VariableList();
+	ISQLStatement val = null;
+}
+{
+	<L_PARENTHESIS>
+		(
+		LOOKAHEAD(3) val=variable(){ vals.addValues(val); }
+		(<COMMA> val=variable(){ vals.addValues(val); })*
+		 |
+		selectSentence=select()		 
+		 ) 
+	<R_PARENTHESIS>
+	{
+		if(selectSentence != null){
+			subQuery = new SubQueryStatement();
+			subQuery.setSelectSentence(selectSentence);
+			
+			return subQuery;
+		}
+		
+		return vals;
+	}
+}
+
+ISQLExpression betweenClauseExpression() :
+{
+	BetweenClauseExpression betweenClause = new BetweenClauseExpression();
+	ISQLStatement left = null;
+	ISQLStatement right = null;
+}
+{
+	<BETWEEN> (LOOKAHEAD(3) left=sqlStatement() | left=columnIdentifier())
+		<AND>
+		(LOOKAHEAD(3) right=sqlStatement() | right=columnIdentifier())
+	{
+		betweenClause.setLeft(left);
+		betweenClause.setRight(right);
+		
+		return betweenClause;
+	}
+}
+
+
+ISQLExpression twoClauseExpression() :
+{
+	TwoClauseExpression exp = null;
+	LikeExpression likeExp = null;
+	ISQLStatement right = null;
+	ISQLStatement escape = null;
+	Token op = null;
+}
+{
+		(op=<EQUALS> | op=<SQL_NOT_EQUALS> | op=<GT> | op=<GEQ> |
+		op=<LT> | op = <LEQ> |
+		op=<AT_AT_MARK> |
+		op=<LIKE>)
+		right=sqlStatement()
+		[<ESCAPE> escape=variable()]
+	{
+		if(op.image.toUpperCase().equals("LIKE")){
+			likeExp = new LikeExpression();
+			
+			likeExp.setRight(right);
+			
+			if(escape != null){
+				likeExp.setEscape(escape);
+			}
+			
+			return likeExp;
+		}
+
+		exp = new TwoClauseExpression();
+		
+		exp.setRight(right);
+		exp.setOpe(op.image);
+		
+		
+		return exp;
+	}
+}
+
+
+
+ISQLStatement sqlStatement() :
+{
+	SQLStatement stmt = new SQLStatement();
+	ISQLStatement first = null;
+	SQLSubStatement sub = null;
+	Token t = null;
+}
+{
+	[LOOKAHEAD(2) t=<DISTINCT>] first=sqlSubStatementOperand() [LOOKAHEAD(2) sub=sqlSubStatement()]
+	{
+		if(t != null){
+			stmt.setDistinct(t.image);
+		}
+		stmt.setFirstStmt(first);
+		stmt.setSubStatement(sub);
+		
+		return stmt;
+	}
+	| <ASTERISK>
+	{
+		return new SQLAllStatemtet();
+	}
+	
+}
+
+SQLSubStatement sqlSubStatement() :
+{
+	SQLSubStatement subStmt = new SQLSubStatement();
+	ISQLStatement operand = null;
+	Token t = null;
+}
+{
+	(t=<BIT_AND> | t=<BIT_OR> | t=<PLUS> | t=<MINUS> | t=<DIV> | t=<ASTERISK>)
+	operand=sqlSubStatementOperand()
+	{
+		subStmt.setOpe(t.image);
+		subStmt.setStatement(operand);
+		return subStmt;
+	}
+	
+}
+
+ISQLStatement sqlSubStatementOperand() :
+{
+	ISQLStatement opernd = null;
+	SQLParenthesisStatement pStmt = null;
+}
+{
+	LOOKAHEAD(3) opernd=variable()
+	{
+		return opernd;
+	}
+	| LOOKAHEAD(3) opernd=columnIdentifier()
+	{
+		return opernd;
+	}
+	| opernd=sqlFunctionCall()
+	{
+		return opernd;
+	}
+	| <L_PARENTHESIS> opernd=sqlStatement() <R_PARENTHESIS>
+	{
+		pStmt = new SQLParenthesisStatement();
+		pStmt.setStmt(opernd);
+		
+		return pStmt;
+	}
+
+}
+
+ColumnIdentifier columnIdentifier() :
+{
+	ColumnIdentifier id = new ColumnIdentifier();
+	Token t1 = null;
+	Token t2 = null;
+	Token t3 = null;
+	Token t4 = null;
+}
+{
+	t1=<IDENTIFIER> [<DOT> t2=<IDENTIFIER> [<DOT> t3=<IDENTIFIER>]] [<COLON><COLON> t4=<IDENTIFIER>]
+	{
+		if(t2 != null && t3 != null){
+			id.setDatabaseName(t1.image);
+			id.setTableName(t2.image);
+			id.setColumnName(t3.image);
+		}else if(t2 != null && t3 == null){
+			id.setTableName(t1.image);
+			id.setColumnName(t2.image);
+		}else{
+			id.setColumnName(t1.image);
+		}
+		
+		// cast
+		if(t4 != null){
+			id.setCastType(t4.image);
+		}
+		
+		return id;
+	}
+}
+
+
+ISQLStatement variable():
+{
+	Token t = null;
+	IPathElement pathElement = null;
+	ISQLStatement stmt = null;
+	SQLVariable variable = null;
+}
+{
+	<DOLLAR> pathElement=domPath()
+	{
+		variable = new SQLVariable();
+		variable.setPathElement(pathElement);
+		variable.setPrefix("$");
+		
+		return variable;
+	}
+	| <AT_MARK> pathElement=domPath()
+	{
+		variable = new SQLVariable();
+		variable.setPathElement(pathElement);
+		variable.setPrefix("@");
+		
+		return variable;
+	}
+	| ( t=<DQSTRLIT> | t=<SQSTRLIT> )
+	{
+		SQLStringConst strvariable = new SQLStringConst();
+		strvariable.setStr(t.image);
+		
+		return strvariable;
+	}
+	| t=<NUMERIC>
+	{
+		SQLNumericConst numericVal = new SQLNumericConst();
+		numericVal.setNumber(t.image);
+		
+		return numericVal;
+	}
+	| t = <NULL>
+	{
+		SQLNullConst nullConst = new SQLNullConst();
+		
+		return nullConst;
+	}
+	| stmt=sqlFunctionCall()
+	{
+		return stmt;
+	}
+	
+	| stmt = sqlSubQuery()
+	{
+		return stmt;
+	}
+	
+}
+
+ISQLStatement sqlSubQuery() :
+{
+	SubQueryStatement subQuery = new SubQueryStatement();
+	SelectSentence selectSentence = null;
+}
+{
+	<L_PARENTHESIS> selectSentence=select() <R_PARENTHESIS>
+	{
+		subQuery.setSelectSentence(selectSentence);
+		
+		return subQuery;
+	}
+}
+
+
+ISQLStatement sqlFunctionCall() :
+{
+	SQLFunctionCallStatement funcCall = new SQLFunctionCallStatement();
+	SQLFunctionCallArguments arguments = null;
+	
+	Token t = null;
+}
+{
+	t=sqlFuncNameElement() <L_PARENTHESIS>
+	[
+		arguments=sqlFunctionArguments()
+		{
+			funcCall.setArguments(arguments);
+		}
+	]
+	<R_PARENTHESIS>
+	{
+		funcCall.setName(t.image);
+		
+		return funcCall;
+	}
+}
+
+Token sqlFuncNameElement() :
+{
+	Token t = null;
+}
+{
+	 (
+		t=<IDENTIFIER> | t=<FROM> | 
+		t=<INTO> | t=<WHERE> | t=<OR> |
+		t=<AND> | t=<LIKE> | t=<ESCAPE> |
+		t=<LEFT> | t=<RIGHT> | t=<NATURAL> |
+		t=<INNER> | t=<OUTER> | t=<FULL> |
+		t=<JOIN> | t=<CROSS> | t=<SET> |
+		t=<VALUES> |
+		t=<GROUP> | t=<BY> | t=<HAVING> |
+		t=<ORDER> | t=<OFFSET> | t=<ON> |
+		t=<LIMIT> | t=<ASC> | t=<DESC> |
+		t=<SQL_NOT> | t=<AS> | t=<DISTINCT> |
+		t=<IN> | t=<BETWEEN> | t=<IS> | t=<ADD>
+		 | t=<PROCEDURE> | t=<EXECUTE> | t=<AFTER> |
+		t=<BEFORE> | t=<CHECK> | t=<RETURNS> | t=<EACH> | t=<SETOF>
+		| t=<LANGUAGE>| t=<REPLACE>| t=<ROW>| t=<STATEMENT>| t=<TRIGGER> | t=<EXISTS>
+		| t=<FOREIGN> | t=<REFERENCES> | t=<DELETE> | t=<SELECT> | t=<UPDATE> | t=<INSERT> 
+		| t=<INDEX> | t=<USING>
+	)
+	{
+		return t;
+	}
+}
+
+SQLFunctionCallArguments sqlFunctionArguments() :
+{
+	SQLFunctionCallArguments args = new SQLFunctionCallArguments();
+	ISQLStatement argument = null;
+}
+{
+	argument=sqlStatement()
+	{
+		args.addArgument(argument);
+	}
+	(
+		<COMMA> argument=sqlStatement()
+		{
+			args.addArgument(argument);
+		}
+	)*
+	{
+		return args;
+	}
+}
+
+
+Identifier identifier() :
+{
+	Identifier idf = new Identifier();
+	Token t = null;
+}
+{
+	t=<IDENTIFIER>
+	{
+		idf.setName(t.image);
+		return idf;
+	}
+}
+
+
+AdjustWhere adjustWhere() :
+{
+	AdjustWhere adWhere = new AdjustWhere();
+	Token t = null;
+}
+{
+	<ADJUST_WHERE> <EQUALS> (t=<TRUE> | t=<FALSE>)
+	{
+		adWhere.setValue(t.image);
+		
+		return adWhere;
+	}
+}
+
+
+AdjustSet adjustSet() :
+{
+	AdjustSet adSet = new AdjustSet();
+	Token t = null;
+}
+{
+	<ADJUST_SET> <EQUALS> (t=<TRUE> | t=<FALSE>)
+	{
+		adSet.setValue(t.image);
+		
+		return adSet;
+	}
+}
+
+
+UpdateSentence update() :
+{
+	UpdateSentence sentence = new UpdateSentence();
+	TableIdentifier tbl = null;
+	SetClause set = null;
+	WhereClause where = null;
+	AdjustWhere adjustWhere = null;
+	AdjustSet adjustSet = null;
+	
+	Token t = null;
+}
+{
+	t=<UPDATE> tbl=table() set=set() [where=where()] [adjustSet=adjustSet()] [adjustWhere=adjustWhere()]
+	{
+		sentence.setTable(tbl);
+		sentence.setSet(set);
+		sentence.setWhere(where);
+		sentence.setAdjustWhere(adjustWhere);
+		sentence.setAdjustSet(adjustSet);
+		
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		return sentence;
+	}
+}
+
+SetClause set() :
+{
+	SetClause set = new SetClause();
+	SetPair pair = null;
+}
+{
+	<SET> pair=setPair(){set.addSet(pair);} ( <COMMA> pair=setPair(){set.addSet(pair);} )*
+	{
+		return set;
+	}
+}
+
+SetPair setPair() :
+{
+	SetPair pair = new SetPair();
+	ColumnIdentifier col = null;
+	ISQLStatement val = null;
+}
+{
+	col=columnIdentifier() <EQUALS> val=sqlStatement()
+	{
+		pair.setColumn(col);
+		pair.setValue(val);
+		
+		return pair;
+	}
+}
+
+
+DeleteSentence delete() :
+{
+	DeleteSentence sentence = new DeleteSentence();
+	FromClause from = null;
+	WhereClause where = null;
+	AdjustWhere adjustWhere = null;
+	
+	Token t = null;
+}
+{
+	t=<DELETE> from=from() [where=where()] [adjustWhere=adjustWhere()]
+	{
+		sentence.setFrom(from);
+		sentence.setWhere(where);
+		sentence.setAdjustWhere(adjustWhere);
+		
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		return sentence;
+	}
+}
+
+InsertSentence insert() :
+{
+	InsertSentence sentence = new InsertSentence();
+	TableIdentifier tbl = null;
+	ColumnList cols = null;
+	VariableList vals = null;
+	
+	Token t = null;
+}
+{
+	t=<INSERT> <INTO> tbl=table() [cols=insertColumns()]
+		<VALUES> vals=values(){sentence.addValues(vals);} (<COMMA> vals=values(){sentence.addValues(vals);})*
+	{
+		sentence.setCols(cols);
+		sentence.setTbl(tbl);
+		
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		return sentence;
+	}
+}
+
+ColumnList insertColumns() :
+{
+	ColumnList colList;
+	ColumnIdentifier col;
+}
+{
+	<L_PARENTHESIS> col=columnIdentifier()
+	{
+		colList = new ColumnList();
+		colList.addColumns(col);
+	} 
+	(<COMMA> col=columnIdentifier()
+		{
+			colList.addColumns(col);
+		}
+	)* <R_PARENTHESIS>
+	{
+		return colList;
+	}
+	
+}
+VariableList values() :
+{
+	VariableList vals = new VariableList();
+	ISQLStatement val = null;
+}
+{
+	<L_PARENTHESIS> 
+	val=variable(){ vals.addValues(val); }
+	(<COMMA> val=variable(){ vals.addValues(val); })* <R_PARENTHESIS>
+	{
+		return vals;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////
+SubstituteSentence substituteSentence() :
+{
+	SubstituteSentence sentence = new SubstituteSentence();
+	IVariableDescription operand = null;
+	IStatement stmt = null;
+}
+{
+	operand=scriptVariable() <EQUALS> (LOOKAHEAD(2) stmt=statement() | stmt = parallelBlock())
+	{
+		sentence.setOperand((VariableDescriptor)operand);
+		
+		sentence.setStatement(stmt);
+		
+		sentence.setLine(operand.getLine());
+		sentence.setLinePosition(operand.getLinePosition());
+		
+		return sentence;
+	}
+	
+}
+
+
+PlusPlusSentence plusPlusSentence() :
+{
+	PlusPlusSentence sentence = new PlusPlusSentence();
+	IStatement stmt = null;
+	PlusPlusStatement pstmt = null;
+}
+{
+	stmt=plusplusStatement()
+	{
+		sentence.setPlusplusStatement(stmt);
+		
+		pstmt = (PlusPlusStatement)stmt;
+		
+		sentence.setLine(pstmt.getLine());
+		sentence.setLinePosition(pstmt.getLinePosition());
+		
+		return sentence;
+	}
+}
+
+IStatement statement() :
+{
+	IStatement stmt = null;
+}
+{
+	stmt=plusStatement()
+	{
+		return stmt;
+	}
+}
+
+IStatement plusStatement() :
+{
+	IStatement first = null;
+	IStatement stmt = null;
+	PlusStatement plusStatement = null;
+	Token t = null;
+}
+{
+	first=multipleStatement()
+	(
+		( t=<PLUS> | t=<MINUS>) stmt=multipleStatement()
+		{
+			if(plusStatement == null){
+				plusStatement = new PlusStatement();
+				plusStatement.setFirst(first);
+				
+			}
+			
+			SubStatement subStmt = new SubStatement();
+			subStmt.setOpe(t.image);
+			subStmt.setTarget(stmt);
+						
+			plusStatement.addOperation(subStmt);
+		}
+	)*
+	{
+		if(plusStatement != null){
+			return plusStatement;
+		}
+		
+		return first;
+	}
+	
+}
+
+IStatement multipleStatement() :
+{
+	IStatement first = null;
+	IStatement stmt = null;
+	Token t = null;
+	MultipleStatement mulStatement = null;
+}
+{
+	first=moduloStatement()
+	(
+		(t=<ASTERISK> | t=<DIV>) stmt=moduloStatement()
+		{
+			if(mulStatement == null){
+				mulStatement = new MultipleStatement();
+				mulStatement.setFirst(first);
+			}
+			
+			SubStatement subStmt = new SubStatement();
+			subStmt.setOpe(t.image);
+			subStmt.setTarget(stmt);
+			
+			mulStatement.addOperation(subStmt);
+		}	
+	)*
+	{
+		if(mulStatement != null){
+			return mulStatement;
+		}
+		
+		return first;
+	}
+}
+
+IStatement moduloStatement() :
+{
+	IStatement first = null;
+	IStatement stmt = null;
+	ModuloStatement modStmt = null;
+}
+{
+	first=parenthesisElement() 
+	(
+		<MODULO> stmt=parenthesisElement()
+		{
+			if(modStmt == null){
+				modStmt = new ModuloStatement();
+				modStmt.setFirst(first);
+				modStmt.addOperation(stmt);
+				
+			}else{
+				modStmt.addOperation(stmt);
+			}
+		}
+	)*
+	{
+		if(modStmt != null){
+			return modStmt;
+		}
+	
+		return first;
+	}
+	
+}
+
+
+IStatement parenthesisElement() :
+{
+	IStatement stmt = null;
+}
+{
+	<L_PARENTHESIS> stmt=statement() <R_PARENTHESIS>
+	{
+		ParenthesisElemenet p = new ParenthesisElemenet();
+		p.setStatement(stmt);
+		
+		return p;
+	}
+	| stmt=plusplusStatement()
+	{
+		return stmt;
+	}
+}
+
+
+IStatement plusplusStatement() :
+{
+	PlusPlusStatement plusplus = null;
+	IStatement stmt = null;
+	Token t1 = null;
+	Token t2 = null;
+}
+{
+	(t1=<PLUSPLUS> | t1=<MINUSMINUS>) stmt=statementElement()  
+	{
+		plusplus = new PlusPlusStatement();
+		plusplus.setStmt(stmt);
+		
+		plusplus.setPreOpe(t1.image);
+		plusplus.setLine(t1.beginLine);
+		plusplus.setLinePosition(t1.beginColumn);
+
+		return plusplus;
+	}
+	|  stmt=statementElement() [ t2=<PLUSPLUS> | t2=<MINUSMINUS> ]
+	{
+		if(t2 == null){
+			return stmt;
+		}
+
+		plusplus = new PlusPlusStatement();
+		plusplus.setStmt(stmt);
+		
+		plusplus.setPostOpe(t2.image);
+		plusplus.setLine(t2.beginLine);
+		plusplus.setLinePosition(t2.beginColumn);
+		
+		return plusplus;
+	}
+
+}
+
+
+IStatement statementElement() :
+{
+	IStatement stmt = null;
+}
+{
+	(
+	stmt=constBoolean() |
+	stmt=funcCall() |
+	stmt=scriptVariable() |
+	stmt=nullConst() |
+	stmt=constStr() |
+	stmt=constNum() |
+	stmt=constDouble() |
+	stmt=booleanStatement()
+	)
+	{
+		return stmt;
+	}
+
+}
+
+
+BooleanConst constBoolean() :
+{
+	BooleanConst blConst = new BooleanConst();
+	Token t = null;
+}
+{
+	(t=<TRUE> | t=<FALSE>)
+	{
+		blConst.setBoolStr(t.image);
+		blConst.setLine(t.beginLine);
+		blConst.setLinePosition(t.beginColumn);
+		
+		return blConst;
+	}
+}
+
+DoubleConst constDouble() :
+{
+	DoubleConst dbl = new DoubleConst();
+	Token t = null;
+}
+{
+	t=<DOUBLE>
+	{
+		dbl.setNumber(t.image);
+		dbl.setLine(t.beginLine);
+		dbl.setLinePosition(t.beginColumn);
+		
+		return dbl;
+	}
+}
+
+
+StringConst constStr() :
+{
+	Token t = null;
+	StringConst cn = new StringConst();
+}
+{
+	( t=<DQSTRLIT> | t=<SQSTRLIT> )
+	{
+		cn.setStr(t.image);
+		cn.setLine(t.beginLine);
+		cn.setLinePosition(t.beginColumn);
+		
+		return cn;
+	}
+}
+
+NumericConst constNum() :
+{
+	NumericConst nc = new NumericConst();
+	Token t = null;
+}
+{
+	t=<NUMERIC>
+	{
+		nc.setNumber(t.image);
+		nc.setLine(t.beginLine);
+		nc.setLinePosition(t.beginColumn);
+		
+		return nc;
+	}
+}
+
+
+NullConst nullConst() :
+{
+	NullConst stmt = new NullConst();
+	Token t = null;
+}
+{
+	t=<NULL>
+	{
+		stmt.setLine(t.beginLine);
+		stmt.setLinePosition(t.beginColumn);
+		
+		return stmt;
+	}
+}
+
+
+BooleanStatement booleanStatement() :
+{
+	BooleanStatement stmt = new BooleanStatement();
+	IScriptCondition cond = null;
+	Token t = null;
+}
+{
+	 t=<BOOL> <L_PARENTHESIS> cond=condition() <R_PARENTHESIS>
+	{
+		stmt.setCondition(cond);
+		stmt.setLine(t.beginLine);
+		stmt.setLinePosition(t.beginColumn);
+		
+		return stmt;
+	}
+}
+
+
+FunctionCallSentence functionCallSentence() :
+{
+	FunctionCallSentence sentence = new FunctionCallSentence();
+	FunctionCall functionCall = null;
+}
+{
+	functionCall=funcCall()
+	{
+		sentence.setLine(functionCall.getLine());
+		sentence.setLinePosition(functionCall.getLinePosition());
+	
+		sentence.setFunctionCall(functionCall);
+		
+		return sentence;
+	}
+}
+
+FunctionCall funcCall() :
+{
+	FunctionCall func = new FunctionCall();
+	FuncArguments args = null;
+	Token t1 = null;
+	Token t2 = null;
+}
+{
+	[LOOKAHEAD(2) t1=funcSpaceElement() <DOT>] t2=funcNameElement() <L_PARENTHESIS> [args=funcArguments()] <R_PARENTHESIS>
+	{
+		func.setArgs(args);
+		
+		if(t1 != null){
+			func.setPackageName(t1.image);
+			
+			func.setLine(t1.beginLine);
+			func.setLinePosition(t1.beginColumn);
+		}else{
+			func.setLine(t2.beginLine);
+			func.setLinePosition(t2.beginColumn);
+		}
+		
+		func.setFuncName(t2.image);
+
+		return func;
+	}
+}
+
+FuncArguments funcArguments() :
+{
+	FuncArguments args = new FuncArguments();
+	IStatement stmt = null;
+}
+{
+	stmt=statement()
+	{
+		args.addArgument(stmt);
+	}
+	(
+		<COMMA> stmt=statement()
+		{
+			args.addArgument(stmt);
+		}
+	)*
+	{
+		return args;
+	}
+}
+
+
+VariableDescriptor scriptVariable() :
+{
+	VariableDescriptor val = null;
+	
+	IPathElement path = null;
+	Token prefix = null;
+}
+{
+	(prefix=<DOLLAR> | prefix=<AT_MARK>) path=domPath()
+	{
+		val = new VariableDescriptor(prefix.image, path);
+		
+		val.setLine(prefix.beginLine);
+		val.setLinePosition(prefix.beginColumn);
+		
+		return val;
+	}
+}
+
+
+
+SynchronizeBlock synchronizedBlock() :
+{
+	Token t = null;
+	IStatement stmt = null;
+	SynchronizeBlock synchronizedBlock = new SynchronizeBlock();
+}
+{
+	t=<SYNCHRONIZED>
+		[ <L_PARENTHESIS> stmt=statement() <R_PARENTHESIS>]
+		
+		<L_BRACE> sentences(synchronizedBlock) <R_BRACE>
+	{
+		synchronizedBlock.setLine(t.beginLine);
+		synchronizedBlock.setLinePosition(t.beginColumn);
+		
+		if(stmt != null){
+			synchronizedBlock.setLockTargetStatement(stmt);
+		}
+		
+		return synchronizedBlock;
+	}
+}
+
+
+IfBlock ifBlock() :
+{
+	Token t = null;
+	IfBlock ifBlock = new IfBlock(this.filePath);
+	IScriptCondition condition = null;
+	ElseBlock elseIf = null;
+}
+{
+	t=<IF><L_PARENTHESIS> condition=condition() <R_PARENTHESIS>
+		<L_BRACE> sentences(ifBlock) <R_BRACE>
+	
+	(LOOKAHEAD(2)
+		elseIf=elseIfBlock()
+		{
+			ifBlock.addElseBlock(elseIf);
+			elseIf = null;
+		}
+	)*
+	[elseIf=elseBlock()]
+	{
+		if(elseIf != null){
+			ifBlock.addElseBlock(elseIf);
+		}
+	
+		ifBlock.setCondition(condition);
+		
+		ifBlock.setLine(t.beginLine);
+		ifBlock.setLinePosition(t.beginColumn);
+		
+		return ifBlock;
+	}
+	
+	
+}
+
+ElseBlock elseIfBlock() :
+{
+	Token t = null;
+	IScriptCondition condition = null;
+	IfBlock ifBlock = new IfBlock(this.filePath);
+	ElseBlock elseBlock = new ElseBlock(this.filePath);
+}
+{
+	t=<ELSE> <IF> <L_PARENTHESIS> condition=condition() <R_PARENTHESIS>
+			<L_BRACE> sentences(ifBlock) <R_BRACE>
+	{
+		ifBlock.setCondition(condition);
+		
+		elseBlock.setIfBlock(ifBlock);
+		
+		ifBlock.setLine(t.beginLine);
+		ifBlock.setLinePosition(t.beginColumn);
+		elseBlock.setLine(t.beginLine);
+		elseBlock.setLinePosition(t.beginColumn);
+		
+		return elseBlock;
+	}
+}
+
+ElseBlock elseBlock() :
+{
+	Token t = null;
+	ElseBlock elseBlock = new ElseBlock(this.filePath);
+}
+{
+	t=<ELSE> <L_BRACE> sentences(elseBlock) <R_BRACE>
+	{
+		elseBlock.setLine(t.beginLine);
+		elseBlock.setLinePosition(t.beginColumn);
+		
+		return elseBlock;
+	}
+}
+
+
+WhileBlock whileBlock() :
+{
+	WhileBlock whileBlk = new WhileBlock(this.filePath);
+	IScriptCondition condition = null;
+	
+	Token t = null;
+}
+{
+	t=<WHILE><L_PARENTHESIS> condition=condition() <R_PARENTHESIS>
+		<L_BRACE> sentences(whileBlk) <R_BRACE>
+	{
+		whileBlk.setLine(t.beginLine);
+		whileBlk.setLinePosition(t.beginColumn);
+		
+		whileBlk.setCondition(condition);
+		
+		return whileBlk;
+	}
+}
+
+DoWhileBlock doWhileBlock() :
+{
+	DoWhileBlock doWhile = new DoWhileBlock(this.filePath);
+	IScriptCondition condition = null;
+	
+	Token t = null;
+	
+}
+{
+	<DO> <R_PARENTHESIS> <L_BRACE> sentences(doWhile) <R_BRACE>
+	t=<WHILE><L_PARENTHESIS> condition=condition() <R_PARENTHESIS>
+	{
+		doWhile.setLine(t.beginLine);
+		doWhile.setLinePosition(t.beginColumn);
+		
+		doWhile.setCondition(condition);
+		
+		return doWhile;
+	}
+	
+}
+
+ForBlock forBlock() :
+{
+	ForBlock forBlk = new ForBlock(this.filePath);
+	
+	IScriptSentence init = null;
+	IScriptSentence afterLoop = null;
+	IScriptCondition condition = null;
+	Token t = null;
+}
+{
+	t=<FOR><L_PARENTHESIS>
+		[init=sentence()] <SEMI_COLON>
+		[condition=condition()] <SEMI_COLON>
+		[afterLoop=sentence()]
+	<R_PARENTHESIS>
+	<L_BRACE> sentences(forBlk) <R_BRACE>
+	{
+		forBlk.setLine(t.beginLine);
+		forBlk.setLinePosition(t.beginColumn);
+		
+		forBlk.setInitSentence(init);
+		forBlk.setCondition(condition);
+		forBlk.setAfterLoop(afterLoop);
+		
+		return forBlk;
+	}
+}
+
+BreakSentence breakSentence() :
+{
+	BreakSentence sentence = new BreakSentence();
+	Token t = null;
+}
+{
+	t=<BREAK>
+	{
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		return sentence;
+	}
+}
+
+ContinueSentence continueSentence() :
+{
+	ContinueSentence sentence = new ContinueSentence();
+	Token t = null;
+}
+{
+	t=<CONTINUE>
+	{
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		return sentence;
+	}
+	
+}
+
+
+IScriptCondition condition() :
+{
+	IScriptCondition condition = null;
+}
+{
+	condition=orCond()
+	{
+		return condition;
+	}
+}
+
+
+
+
+IScriptCondition orCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	OrCondition or = null;
+}
+{
+	first=andCond()
+	(LOOKAHEAD(2)
+		<LOGICAL_OR> cnd=andCond()
+		{
+			if(or == null){
+				or = new OrCondition();
+				or.addCondition(first);
+			}
+			
+			or.addCondition(cnd);
+		}
+	)*
+	{
+		if(or != null){
+			return or;
+		}
+		
+		return first;
+	}
+}
+
+IScriptCondition andCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	AndCondition and = null;
+	
+}
+{
+	first=directCond()
+	(LOOKAHEAD(2)
+		<LOGICAL_AND> cnd=directCond()
+		{
+			if(and == null){
+				and = new AndCondition();
+				and.addCondition(first);
+			}
+			
+			and.addCondition(cnd);
+		}
+	)*
+	{
+		if(and != null){
+			return and;
+		}
+		
+		return first;
+	}
+}
+
+
+IScriptCondition directCond() :
+{
+	Token ope = null;
+	IScriptCondition left = null;
+	IScriptCondition right = null;
+	DirectCondition directCnd = null;
+}
+{
+	left=notCondition()
+	[LOOKAHEAD(2)
+		( ope=<CMP_EQUALS> | ope=<CMP_NOTEQUALS> | ope=<GT> | ope=<GEQ> | ope=<LT> | ope=<LEQ> )
+		right=notCondition()
+	]
+	{
+		if(ope != null){
+			directCnd = new DirectCondition();
+			
+			directCnd.setLeft(left);
+			directCnd.setOpe(ope.image);
+			directCnd.setRight(right);
+			
+			directCnd.setLine(left.getLine());
+			directCnd.setLinePosition(left.getLinePosition());
+			
+			return directCnd;
+		}
+		
+		return left;
+	}
+}
+
+IScriptCondition notCondition() :
+{
+	IScriptCondition cnd = null;
+	Token t = null;
+}
+{
+	t=<NOT> cnd=orCond()
+	{
+		NotCondition notCondition = new NotCondition();
+		notCondition.setCondition(cnd);		
+		
+		notCondition.setLine(t.beginLine);
+		notCondition.setLinePosition(t.beginColumn);
+		
+		return notCondition;
+	}
+	| cnd=plusStmtCond()
+	{
+		return cnd;
+	}
+	
+}
+
+IScriptCondition plusStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	PlusStmtCondition scCond = null;
+}
+{
+	first=minusStmtCond()
+	(
+		<PLUS> cnd=minusStmtCond()
+		{
+			if(scCond == null){
+				scCond = new PlusStmtCondition();
+				scCond.addCondition(first);
+				
+				scCond.setLine(first.getLine());
+				scCond.setLinePosition(first.getLinePosition());
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition minusStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	MinusStmtCondition scCond = null;
+}
+{
+	first=multipleStmtCond()
+	(
+		<MINUS> cnd=multipleStmtCond()
+		{
+			if(scCond == null){
+				scCond = new MinusStmtCondition();
+				scCond.addCondition(first);
+				
+				scCond.setLine(first.getLine());
+				scCond.setLinePosition(first.getLinePosition());
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition multipleStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	MultipleStmtCondition scCond = null;
+}
+{
+	first=divStmtCond()
+	(
+		<ASTERISK> cnd=divStmtCond()
+		{
+			if(scCond == null){
+				scCond = new MultipleStmtCondition();
+				scCond.addCondition(first);
+				
+				scCond.setLine(first.getLine());
+				scCond.setLinePosition(first.getLinePosition());
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition divStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	DivStmtCondition scCond = null;
+}
+{
+	first=moduloStmtCond()
+	(
+		<DIV> cnd=moduloStmtCond()
+		{
+			if(scCond == null){
+				scCond = new DivStmtCondition();
+				scCond.addCondition(first);
+				
+				scCond.setLine(first.getLine());
+				scCond.setLinePosition(first.getLinePosition());
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+
+
+IScriptCondition moduloStmtCond() :
+{
+	IScriptCondition first = null;
+	IScriptCondition cnd = null;
+	ModuloStmtCondition scCond = null;
+}
+{
+	first=parenthesisCond()
+	(
+		<MODULO> cnd=parenthesisCond()
+		{
+			if(scCond == null){
+				scCond = new ModuloStmtCondition();
+				scCond.addCondition(first);
+				
+				scCond.setLine(first.getLine());
+				scCond.setLinePosition(first.getLinePosition());
+			}
+			scCond.addCondition(cnd);
+		}
+	)*
+	{
+		if(scCond == null){
+			return first;
+		}
+		return scCond;
+	}
+}
+
+IScriptCondition parenthesisCond() :
+{
+	IScriptCondition cnd = null;
+	Token t = null;
+}
+{
+	t=<L_PARENTHESIS> cnd=orCond() <R_PARENTHESIS>
+	{
+		ParenthesisCondition pcnd = new ParenthesisCondition();
+		pcnd.setCondition(cnd);
+		
+        pcnd.setLine(t.beginLine);
+        pcnd.setLinePosition(t.beginColumn);
+		
+		return pcnd;
+	}
+	 |	cnd=variableStatementCondition()
+	{
+		return cnd;
+	}
+}
+
+IScriptCondition variableStatementCondition() :
+{
+	IStatement stmt = null;
+	VariableStmtCondition cond = new VariableStmtCondition();
+}
+{
+	stmt=plusplusStatement()
+	{
+		cond.setStmt(stmt);
+		
+		cond.setLine(stmt.getLine());
+		cond.setLinePosition(stmt.getLinePosition());
+		
+		return cond;
+	}
+}
+
+
+ReturnSentence returnSentence() :
+{
+	ReturnSentence ret = new ReturnSentence();
+	IStatement stmt = null;
+	Token t = null;
+}
+{
+	t=<RETURN> stmt=statement()
+	{
+		ret.setLine(t.beginLine);
+		ret.setLinePosition(t.beginColumn);
+		
+		ret.setReturnStatement(stmt);
+		
+		return ret;
+	}
+}
+
+RedirectSentence redirectSentence() :
+{
+	RedirectSentence ret = new RedirectSentence();
+	IStatement stmt = null;
+	IStatement redirectCode = null;
+	Token t = null;
+}
+{
+	t=<REDIRECT> stmt=statement() [<COMMA> redirectCode=statement()]
+	{
+		ret.setLine(t.beginLine);
+		ret.setLinePosition(t.beginColumn);
+		
+		ret.setRedirectUrl(stmt);
+		
+		if(redirectCode != null){
+			ret.setRedirectCode(redirectCode);
+		}
+		
+		return ret;
+	}
+}
+
+
+DownloadSentence downloadSentence() :
+{
+	DownloadSentence ret = new DownloadSentence();
+	IStatement stmt = null;
+	IStatement fileName = null;
+	IStatement contentType = null;
+	Token t = null;
+}
+{
+	t=<DOWNLOAD> stmt=statement() [<COMMA> fileName=statement() [ <COMMA> contentType=statement()]]
+	{
+		ret.setLine(t.beginLine);
+		ret.setLinePosition(t.beginColumn);
+		
+		ret.setDownloadFile(stmt);
+		
+		if(fileName != null){
+			ret.setDownloadFileName(fileName);
+		}
+		
+		if(contentType != null){
+			ret.setContentType(contentType);
+		}
+		
+		return ret;
+	}
+}
+
+LocalSentence localSentence() :
+{
+	LocalSentence localSentence = new LocalSentence();
+	Token t = null;
+	VariableDescriptor operand = null;
+}
+{
+	t=<LOCAL> operand=scriptVariable()
+	{
+		localSentence.setLine(t.beginLine);
+		localSentence.setLinePosition(t.beginColumn);
+		
+		localSentence.setOperand(operand);
+		
+		return localSentence;
+	}
+}
+
+ThrowSentence throwSentence() :
+{
+	ThrowSentence sentence = new ThrowSentence();
+	IStatement stmt = null;
+	Token t = null;
+}
+{
+	t=<THROW> stmt=statement()
+	{
+		sentence.setLine(t.beginLine);
+		sentence.setLinePosition(t.beginColumn);
+		
+		sentence.setThrowStatement(stmt);
+		
+		return sentence;
+	}
+}
+
+
+UseSentence useSentence() :
+{
+	UseSentence sentence = new UseSentence();
+	Token use = null;
+	Token idt = null;
+}
+{
+	use=<USE> idt=<IDENTIFIER>
+	{
+		sentence.setLine(use.beginLine);
+		sentence.setLinePosition(use.beginColumn);
+		
+		sentence.setDataSource(idt.image);
+		
+		return sentence;
+	}
+}
+
+
+CreateIndexSentence createIndexCentence(Token t1) :
+{
+	CreateIndexSentence sentence = new CreateIndexSentence();
+	
+	Token t = null;
+	
+	TableIdentifier table = null;
+	ColumnIdentifier col= null;
+	
+	Token algoT = null;
+}
+{
+	<INDEX> t=<IDENTIFIER>
+	<ON> table=table() 
+	[
+		<USING> algoT=<IDENTIFIER>
+		{
+			sentence.setUsingAlgo(new Identifier(algoT.image));
+		}
+	]
+	
+	<L_PARENTHESIS>
+		col=columnIdentifier() 
+		{
+			sentence.addColumn(col);
+		}
+		
+		(
+			<COMMA> col=columnIdentifier()
+			{
+				sentence.addColumn(col);
+			}
+		)*
+	 <R_PARENTHESIS>
+	
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		sentence.setIndexName(new Identifier(t.image));
+		sentence.setTable(table);
+			
+		
+		return sentence;
+	}
+}
+
+DropIndexSentence dropIndexSentence(Token t1) :
+{
+	DropIndexSentence sentence = new DropIndexSentence();
+	Token t = null;
+}
+{
+	<INDEX> t=<IDENTIFIER>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		sentence.setIndexName(new Identifier(t.image));
+		
+		return sentence;
+	}
+}
+
+
+
+CreateTableSentence createTableSentence(Token t1) :
+{
+	CreateTableSentence sentence = new CreateTableSentence();
+	//Token t1 = null;
+	TableIdentifier table = null;
+	DdlColumnDescriptor desc = null;
+	PrimaryKeys keys = null;
+	Unique unique = null;
+	CheckDefinition check = null;
+	ForeignKey foreignKey = null;
+}
+{
+	<TABLE> table=table() <L_PARENTHESIS>
+	
+	desc = ddlColumnDescriptor()
+	{
+		sentence.addColumnDescriptor(desc);
+	}
+	
+	(
+		LOOKAHEAD(2) <COMMA>
+		(
+			desc=ddlColumnDescriptor(){
+				sentence.addColumnDescriptor(desc);
+			}
+			|
+			check=check(){
+				sentence.addCheck(check);
+			}
+		)
+	)*
+	(
+		<COMMA>
+		(
+			(
+				keys=primaryKeys()
+				{
+					sentence.setKeys(keys);
+				}
+			)
+			|
+			(
+				unique=unique()
+				{
+					sentence.addUnique(unique);
+				}
+			)
+			|
+			(
+				foreignKey=foreignKey()
+				{
+					sentence.addForeignKey(foreignKey);
+				}
+			)
+		)
+	)*
+	
+	
+	<R_PARENTHESIS>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		sentence.setTable(table);
+		
+		return sentence;
+	}
+}
+
+ForeignKey foreignKey() :
+{
+	ForeignKey foreignKey = new ForeignKey();
+	ColumnList foreignKeys = null;
+	ColumnList referencedKey = null;
+	TableIdentifier table = null;
+}
+{
+	<FOREIGN> <KEY> <L_PARENTHESIS> foreignKeys=columnList() <R_PARENTHESIS>
+	<REFERENCES>
+	table=table() <L_PARENTHESIS> referencedKey=columnList() <R_PARENTHESIS>
+	
+	{
+		foreignKey.setRefTable(table);
+		foreignKey.setForeignKeys(foreignKeys);
+		foreignKey.setReferencedKey(referencedKey);
+		
+		return foreignKey;
+	}
+}
+
+Unique unique() :
+{
+	Unique unique = new Unique();
+	Token t1 = null;
+}
+{
+	<UNIQUE> <L_PARENTHESIS>
+	
+	t1=<IDENTIFIER>
+	{
+		unique.addKey(t1.image);
+	}
+	
+	(
+		<COMMA> t1=<IDENTIFIER>{
+			unique.addKey(t1.image);
+		}
+	)*
+	
+	<R_PARENTHESIS>
+	{
+		return unique;
+	}
+}
+
+PrimaryKeys primaryKeys() :
+{
+	PrimaryKeys primaryKeys = new PrimaryKeys();
+	Token t1 = null;
+}
+{
+	<PRIMARY> <KEY> <L_PARENTHESIS>
+	
+	t1=<IDENTIFIER>
+	{
+		primaryKeys.addKey(t1.image);
+	}
+	
+	(
+		<COMMA> t1=<IDENTIFIER>{
+			primaryKeys.addKey(t1.image);
+		}
+	)*
+	
+	<R_PARENTHESIS>
+	{
+		return primaryKeys;
+	}
+}
+
+DdlColumnDescriptor ddlColumnDescriptor() :
+{
+	DdlColumnDescriptor desc = new DdlColumnDescriptor();
+	ColumnTypeDescriptor typeDesc = null;
+	Token t1 = null;
+	Token tuni = null;
+	Token notnull = null;
+	ISQLStatement defaultVal = null;
+	CheckDefinition check = null;
+}
+{
+	t1=<IDENTIFIER> typeDesc=columnTypeDescriptor()
+		( (notnull=<SQL_NOT> <NULL>) | (tuni=<UNIQUE>) | (<SQL_DEFAULT> defaultVal=variable()) )*
+		[check=check()]
+	{
+		desc.setTypeDescriptor(typeDesc);
+		if(defaultVal != null){
+			desc.setDefaultValue(defaultVal);
+		}
+		if(notnull != null){
+			desc.setNotnull(true);
+		}
+		if(tuni != null){
+			desc.setUnique(true);
+		}
+		if(check != null){
+			desc.setCheck(check);
+		}
+		
+		desc.setName(t1.image);
+		desc.setLine(t1.beginLine);
+		desc.setLinePosition(t1.beginColumn);
+		
+		return desc;
+	}
+}
+
+CheckDefinition check() :
+{
+	CheckDefinition check = new CheckDefinition();
+	ISQLExpression exp = null;
+}
+{
+	<CHECK> <L_PARENTHESIS>
+	
+	exp=orExp()
+	{
+		check.setExp(exp);
+	}
+	
+	<R_PARENTHESIS>
+	{
+		return check;
+	}
+}
+
+ColumnTypeDescriptor columnTypeDescriptor() :
+{
+	ColumnTypeDescriptor typeDesc = new ColumnTypeDescriptor();
+	ISQLStatement val = null;
+	Token t1 = null;
+}
+{
+	(t1=<IDENTIFIER> | t1=<TRIGGER>)
+	[
+		<L_PARENTHESIS> val=variable() <R_PARENTHESIS>
+	]
+	{
+		if(val != null){
+			typeDesc.setLength(val);
+		}
+		typeDesc.setTypeName(t1.image);
+		
+		return typeDesc;
+	}
+}
+
+DropTableSentence dropTableSentence(Token t1) :
+{
+	DropTableSentence sentence = new DropTableSentence();
+	//Token t1 = null;
+	TableIdentifier table = null;
+}
+{
+	<TABLE> table=table()
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		sentence.setTable(table);
+		
+		return sentence;
+	}
+}
+
+CreateFunctionSentence createFunctionSentence(Token t1) :
+{
+	CreateFunctionSentence sentence = new CreateFunctionSentence();
+	Token tn = null;
+	Token rt = null;
+	ColumnTypeDescriptor typeDesc = null;
+	Token st = null;
+	Token lang = null;
+	Token prog = null;
+}
+{
+	[rt=<OR> <REPLACE>] <FUNCTION> tn=<IDENTIFIER>
+	{
+		if(rt != null){
+			sentence.setRelpace(true);
+		}
+		
+	}
+	<L_PARENTHESIS>
+	[
+		typeDesc=columnTypeDescriptor()
+		{
+			sentence.addTypeDesc(typeDesc);
+		}
+		(
+			<COMMA>
+			typeDesc=columnTypeDescriptor()
+			{
+				sentence.addTypeDesc(typeDesc);
+			}
+		)*
+	]
+	<R_PARENTHESIS>
+	
+	<RETURNS> [st=<SETOF>] typeDesc=columnTypeDescriptor()
+	{
+		if(st != null){
+			sentence.setSetof(true);
+		}
+		
+		sentence.setRetType(typeDesc);
+	}
+	<AS>
+	prog=<SQSTRLIT>
+	
+	<LANGUAGE> lang=<SQSTRLIT>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		sentence.setFuncName(tn.image);
+		sentence.setProgram(prog.image);
+		sentence.setLanguage(lang.image);
+		
+		return sentence;
+	}
+}
+
+
+CreateTriggerSentence createTriggerSentence(Token t1) :
+{
+	CreateTriggerSentence sentence = new CreateTriggerSentence();
+	Token tn = null;
+	Token ba = null;
+	Token table = null;
+	UpdateType uType = null;
+	Token updateTarget = null;
+	Token funcName = null;
+	SQLFunctionCallArguments arguments = null;
+}
+{
+	<TRIGGER> tn=<IDENTIFIER>
+	[ ba=<BEFORE> | ba=<AFTER> ]
+	[
+		uType=updateType()
+		{
+			sentence.addUpdateType(uType);
+		}
+		(
+			<OR> uType=updateType()
+			{
+				sentence.addUpdateType(uType);
+			}
+		)*
+	]
+	<ON>
+		table=<IDENTIFIER>
+	<FOR> <EACH> [ updateTarget=<ROW> | updateTarget=<STATEMENT> ]
+	
+	<EXECUTE> <PROCEDURE> funcName=<IDENTIFIER>
+	<L_PARENTHESIS>
+	[
+		arguments=sqlFunctionArguments()
+		{
+			sentence.setFuncArguments(arguments);
+		}
+	]
+	<R_PARENTHESIS>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		sentence.setTriggerName(tn.image);
+		sentence.setTiming(ba.image);
+		sentence.setTriggerTable(table.image);
+		
+		sentence.setUpdateTarget(updateTarget.image);
+		sentence.setFuncName(funcName.image);
+		
+		return sentence;
+	}
+}
+
+UpdateType updateType() :
+{
+	UpdateType uType = new UpdateType();
+	Token t1 = null;
+	Token columnT = null;
+}
+{
+	(t1=<INSERT> | t1=<UPDATE> | t1=<DELETE>)
+	[
+		<OF> columnT=<IDENTIFIER>
+		{
+			uType.addColList(columnT.image);
+		}
+		(
+			<COMMA> columnT=<IDENTIFIER>
+			{
+				uType.addColList(columnT.image);
+			}
+		)*
+	]
+	{
+		uType.setTypeName(t1.image);
+		return uType;
+	}
+}
+
+DropFunctionSentence dropFunctionSentence(Token t1) :
+{
+	DropFunctionSentence sentence = new DropFunctionSentence();
+	Token tn = null;
+	ColumnTypeDescriptor typeDesc = null;
+}
+{
+	<FUNCTION> tn=<IDENTIFIER>
+	<L_PARENTHESIS>
+	[
+		typeDesc=columnTypeDescriptor()
+		{
+			sentence.addTypeDesc(typeDesc);
+		}
+		(
+			<COMMA>
+			typeDesc=columnTypeDescriptor()
+			{
+				sentence.addTypeDesc(typeDesc);
+			}
+		)*
+	]
+	<R_PARENTHESIS>
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		sentence.setFuncName(tn.image);
+		
+		return sentence;
+	}
+}
+
+DropTriggerSentence dropTriggerSentence(Token t1) :
+{
+	DropTriggerSentence sentence = new DropTriggerSentence();
+	Token ifexists = null;
+	Token name = null;
+	Token table = null;
+	Token opt = null;
+}
+{
+	<TRIGGER> [ ifexists=<IF> <EXISTS> ] name=<IDENTIFIER> <ON> table=<IDENTIFIER> [ opt=<IDENTIFIER> ]
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		
+		if(ifexists != null){
+			sentence.setExixts(true);
+		}
+		
+		sentence.setTriggerName(name.image);
+		sentence.setTable(table.image);
+		
+		if(opt != null){
+			sentence.setOpt(opt.image);
+		}
+		
+		return sentence;
+	}
+}
+
+
+AlterTableSentence alterTableSentence() :
+{
+	AlterTableSentence sentence = new AlterTableSentence();
+	Token t1 = null;
+	TableIdentifier table = null;
+	IAlterAction action;
+}
+{
+	t1=<ALTER> <TABLE> table=table() action=alterAction()
+	{
+		sentence.setLine(t1.beginLine);
+		sentence.setLinePosition(t1.beginColumn);
+		sentence.setTable(table);
+		
+		sentence.setAction(action);
+		
+		return sentence;
+	}
+}
+
+IAlterAction alterAction() :
+{
+	IAlterAction action = null;
+}
+{
+	(action=alterAddAction() |
+	action=alterDropAction() |
+	action=alterRenameAction())
+	{
+		return action;
+	}
+}
+
+IAlterAction alterAddAction() :
+{
+	AlterAdd acion = new AlterAdd();
+	DdlColumnDescriptor columnDesc = null;
+}
+{
+	<ADD> [<COLUMN>] columnDesc=ddlColumnDescriptor()
+	{
+		acion.setColumnDesc(columnDesc);
+		
+		return acion;
+	}
+}
+
+IAlterAction alterDropAction() :
+{
+	AlterDrop acion = new AlterDrop();
+	Token t1 = null;
+	
+}
+{
+	<DROP> [<COLUMN>] t1=<IDENTIFIER>
+	{
+		acion.setColumnDesc(t1.image);
+		
+		return acion;
+	}
+}
+
+IAlterAction alterRenameAction() :
+{
+	AlterRename acion = new AlterRename();
+	Token t1 = null;
+	Token t2 = null;
+}
+{
+	<RENAME> [t1=<IDENTIFIER>] <TO> t2=<IDENTIFIER>
+	{
+		if(t1 != null){
+			acion.setBeforeName(t1.image);
+		}
+		
+		acion.setNewName(t2.image);
+		
+		return acion;
+	}
+}
+
+///  PATH ELEMENT /////////////////////////////////////////////////////////
+
+IPathElement domPath() :
+{
+	DomPathElement first = null;
+	DomPathElement domProp = null;
+	IStatement numeric = null;
+	
+	PathElement path = null;
+	IPathElement current = null;
+}
+{
+	first=domPathElement() 
+	{
+		path = new PathElement(first.getImage());
+		current = path;
+	}	
+	(
+		(<DOT> domProp=domPathElement()) 
+		{
+			PathElement next = new PathElement(domProp.getImage());
+			current.setChild(next);
+			next.setParent(current);
+			
+			current = next;
+		}
+		
+		| (<L_BRACKET> numeric=statement() <R_BRACKET>)
+		{
+			ArrayPathElement nextAr = new ArrayPathElement(numeric);
+			
+			current.setChild(nextAr);
+			nextAr.setParent(current);
+			
+			current = nextAr;
+		}
+	)*
+	
+	{
+		return path;
+	}
+}
+
+
+DomPathElement domPathElement() :
+{
+	Token t = null;
+	DomPathElement el = new DomPathElement();
+}
+{
+	(
+		t=<IDENTIFIER> | t=<FROM> | t=<SELECT> |
+		t=<INSERT> | t=<UPDATE> | t=<DELETE> |
+		t=<INTO> | t=<WHERE> | t=<OR> |
+		t=<AND> | t=<LIKE> | t=<ESCAPE> |
+		t=<LEFT> | t=<RIGHT> | t=<NATURAL> |
+		t=<INNER> | t=<OUTER> | t=<FULL> |
+		t=<JOIN> | t=<CROSS> | t=<SET> |
+		t=<VALUES> | t=<IF> | t=<ELSE> |
+		t=<GROUP> | t=<BY> | t=<HAVING> |
+		t=<ORDER> | t=<OFFSET> | t=<ON> |
+		t=<LIMIT> | t=<ASC> | t=<DESC> |
+		t=<SQL_NOT> | t=<AS> | t=<DISTINCT> |
+		t=<IN> | t=<BETWEEN> | t=<IS> |
+		t=<BEGIN> | t=<COMMIT> | t=<END> |
+		t=<ROLLBACK> | t=<CREATE> | t=<DROP> |
+		t=<LEVEL> | t=<PREPARE> | t=<TRANSACTION> |  t=<ISOLATION> |  t=<PREPARED> |
+		t=<ALTER> | t=<ADD> | t=<RENAME>  |
+		t=<COLUMN> | t=<TO> | t=<PRIMARY> |
+		t=<KEY> | t=<PROCEDURE> | t=<EXECUTE>| t=<AFTER> |
+		t=<BEFORE> | t=<CHECK> | t=<RETURNS> | t=<EACH> | t=<SETOF>
+		| t=<LANGUAGE>| t=<REPLACE>| t=<ROW>| t=<STATEMENT>| t=<TRIGGER> | t=<EXISTS>
+		| t=<FOREIGN> | t=<REFERENCES> | t=<INDEX> | t=<USING> | t=<PARALLEL> | t=<LOCAL>
+	)
+	{
+		el.addString(t.image);
+	}
+	[
+		LOOKAHEAD(2)
+		(t=<MINUS>)
+		{
+			el.addString(t.image);
+		}
+		(
+			t=<IDENTIFIER> | t=<FROM> | t=<SELECT> |
+			t=<INSERT> | t=<UPDATE> | t=<DELETE> |
+			t=<INTO> | t=<WHERE> | t=<OR> |
+			t=<AND> | t=<LIKE> | t=<ESCAPE> |
+			t=<LEFT> | t=<RIGHT> | t=<NATURAL> |
+			t=<INNER> | t=<OUTER> | t=<FULL> |
+			t=<JOIN> | t=<CROSS> | t=<SET> |
+			t=<VALUES> | t=<IF> | t=<ELSE> |
+			t=<GROUP> | t=<BY> | t=<HAVING> |
+			t=<ORDER> | t=<OFFSET> | t=<ON> |
+			t=<LIMIT> | t=<ASC> | t=<DESC> |
+			t=<SQL_NOT> | t=<AS> | t=<DISTINCT> |
+			t=<IN> | t=<BETWEEN> | t=<IS> |
+			t=<BEGIN> | t=<COMMIT> | t=<END> |
+			t=<ROLLBACK> | t=<CREATE> | t=<DROP> |
+			t=<LEVEL> | t=<PREPARE> | t=<TRANSACTION> |  t=<ISOLATION> |  t=<PREPARED> |
+			t=<ALTER> | t=<ADD> | t=<RENAME>  |
+			t=<COLUMN> | t=<TO> | t=<PRIMARY> |
+			t=<KEY> | t=<PROCEDURE> | t=<EXECUTE> | t=<AFTER> |
+			t=<BEFORE> | t=<CHECK> | t=<RETURNS> | t=<EACH> | t=<SETOF>
+			| t=<LANGUAGE>| t=<REPLACE>| t=<ROW>| t=<STATEMENT>| t=<TRIGGER> | t=<EXISTS>
+			| t=<FOREIGN> | t=<REFERENCES> | t=<INDEX> | t=<USING> | t=<PARALLEL> | t=<LOCAL>
+		)
+		{
+			el.addString(t.image);
+		}
+	]
+	{
+		return el;
+	}
+}
+
+/**
+
+<FOREIGN: "FOREIGN">	|
+	<REFERENCES: "REFERENCES">	|
+**/
+
+Token funcSpaceElement() :
+{
+	Token t = null;
+}
+{
+	(
+		t=<IDENTIFIER> | t=<FROM> | 
+		t=<INTO> | t=<WHERE> | t=<OR> |
+		t=<AND> | t=<LIKE> | t=<ESCAPE> |
+		t=<LEFT> | t=<RIGHT> | t=<NATURAL> |
+		t=<INNER> | t=<OUTER> | t=<FULL> |
+		t=<JOIN> | t=<CROSS> | t=<SET> |
+		t=<VALUES> |
+		t=<GROUP> | t=<BY> | t=<HAVING> |
+		t=<ORDER> | t=<OFFSET> | t=<ON> |
+		t=<LIMIT> | t=<ASC> | t=<DESC> |
+		t=<SQL_NOT> | t=<AS> | t=<DISTINCT> |
+		t=<IN> | t=<BETWEEN> | t=<IS> | t=<ADD>
+		 | t=<PROCEDURE> | t=<EXECUTE> | t=<AFTER> |
+		t=<BEFORE> | t=<CHECK> | t=<RETURNS> | t=<EACH> | t=<SETOF>
+		| t=<LANGUAGE>| t=<REPLACE>| t=<ROW>| t=<STATEMENT>| t=<TRIGGER> | t=<EXISTS>
+		| t=<FOREIGN> | t=<REFERENCES> | t=<RENAME> | t=<INDEX> | t=<USING> 
+		| t = <PARALLEL>
+	)
+	{
+		return t;
+	}
+}
+
+Token funcNameElement() :
+{
+	Token t = null;
+}
+{
+	 (
+		t=<IDENTIFIER> | t=<FROM> | 
+		t=<INTO> | t=<WHERE> | t=<OR> |
+		t=<AND> | t=<LIKE> | t=<ESCAPE> |
+		t=<LEFT> | t=<RIGHT> | t=<NATURAL> |
+		t=<INNER> | t=<OUTER> | t=<FULL> |
+		t=<JOIN> | t=<CROSS> | t=<SET> |
+		t=<VALUES> |
+		t=<GROUP> | t=<BY> | t=<HAVING> |
+		t=<ORDER> | t=<OFFSET> | t=<ON> |
+		t=<LIMIT> | t=<ASC> | t=<DESC> |
+		t=<SQL_NOT> | t=<AS> | t=<DISTINCT> |
+		t=<IN> | t=<BETWEEN> | t=<IS> | t=<ADD>
+		 | t=<PROCEDURE> | t=<EXECUTE> | t=<AFTER> |
+		t=<BEFORE> | t=<CHECK> | t=<RETURNS> | t=<EACH> | t=<SETOF>
+		| t=<LANGUAGE>| t=<REPLACE>| t=<ROW>| t=<STATEMENT>| t=<TRIGGER> | t=<EXISTS>
+		| t=<FOREIGN> | t=<REFERENCES> | t=<DELETE> | t=<SELECT> | t=<UPDATE> | t=<INSERT> 
+		 | t=<RENAME> | t=<INDEX> | t=<USING>
+	)
+	{
+		return t;
+	}
+}
+///////////////////////////////////////////////////////////
+
+
+
+
